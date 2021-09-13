@@ -141,8 +141,7 @@ int main(int argc, char *argv[])
       y[nPositions] =  atof( tmptokens[1] );  
       
       free(tofree);
-       
-      if(verbose) fprintf(stderr,"Read plot %d\n", nPositions);
+        
       if(nPositions>99){
         fprintf(stderr, "ERROR: More than 100 rows with locations, please split your table with plot location coordinates in less than 100 plots per file.\n"); 
         byebye(true, argc==1); 
@@ -151,7 +150,7 @@ int main(int argc, char *argv[])
       nPositions++; 
        
     }
-    if(verbose)  fprintf(stderr, "Read %d positions;\n", nPositions);
+    if(verbose)  fprintf(stderr, "Read %d plot positions...\n", nPositions);
   }
   
   if(verbose) fprintf(stderr, "Finished reading '%s'  \n", file_name_location); 
@@ -205,7 +204,7 @@ int main(int argc, char *argv[])
         // convert to plot center reference
         original2plotCoords(&lasreader->point, x[i], y[i]);
         collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i);
-     
+      
       } 
       
       if ( progress && ((lasreader->p_count % progress) == 0))
@@ -227,8 +226,8 @@ int main(int argc, char *argv[])
   }
   fclose(fpLocations);
   
-  
-  collector->sumsPlotDomes(true);
+   
+  collector->finalizePlotDomes(true, true); 
   
   printf( "\n\r"); 
   printf( "\n\r"); 

@@ -18,10 +18,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cmath>
- 
+#include  <stdint.h>
 #include "lasreader.hpp" 
 #include "laswriter.hpp"
-#include <tiffio.h>
+#include "tiff.h"
+#include "tiffio.h"
  
 struct point
 {
@@ -48,69 +49,123 @@ class quantizer{
     int nZeniths;
     int nPlots;
     int ***domes; 
+    int ***images; 
     float *plotGapFraction; 
     
     quantizer(int az, int ze, int plots) { 
-      fprintf(stderr, "----------------%d", plots);
-      this->plotGapFraction = new float(plots);
+      
+      this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
       this->nZeniths=ze;
       nPlots=plots;
-      this->domes = (int***)malloc(sizeof *domes * plots); //type of *arr is T **
-      if (this->domes)
+      this->domes = (int***)malloc(sizeof( *domes) * plots);  
+      this->images = (int***)malloc(sizeof( *domes) * plots);  
+      if (this->domes && this->images)
       {
         int i;
         for (i = 0; i < plots; i++)
         {
-          this->domes[i] = (int**)malloc(sizeof *this->domes[i] * nZeniths); // type of *arr[i] is T *
-          if (this->domes[i])
+          this->plotGapFraction[i]=0.0;
+          this->domes[i] = (int**)malloc(sizeof(*this->domes[i]) * nZeniths); // type of *arr[i] is T *
+          this->images[i] = (int**)malloc(sizeof(*this->images[i]) * nZeniths * nZeniths); // type of *arr[i] is T *
+          if (this->domes[i] && this->images[i])
           {
             int j;
             for (j = 0; j < nZeniths; j++)
             {
-              this->domes[i][j] = (int*)malloc(sizeof *this->domes[i][j] * nAzimuths);
+              this->domes[i][j] =  new int[nAzimuths]; //(int*)malloc(sizeof( *this->domes[i][j]) * nAzimuths);
+              this->images[i][j] = new int[nZeniths]; // (int*)malloc(sizeof( *this->images[i][j]) * nZeniths);
             }
           }
         }
       }
     }; 
-    quantizer(int plots) { quantizer(AZIMUTHS,  ZENITHS,  plots); };
-    int sumPlotDome(int plotn) {   
-        int hits = 0;
-        for(int i1=0; i1 <  nZeniths; i1++ ){
-          for(int i2=0; i2 <  nAzimuths; i2++ ){
-            if(this->domes[plotn][i1][i2] > 0) hits++;
-          }
-        }
-        return(hits); 
-    };
+     
 
    void fillDomeGrid2(float az, float zen, int plotn=0){
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
      int z= (int)(floor(zen));
      if(z==nZeniths) z--;
-     this->domes[plotn][z][a]++;
+     if ( this->domes[plotn][z][a] < (INT32_MAX - 1)) {
+       this->domes[plotn][z][a]++;
+     }
      
   }; 
    void fillDomeGrid(polarCoordinate p, int plotn=0){
      fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
    }; 
    
-   void sumsPlotDomes(bool verbose=false) { 
+   bool finalizePlotDome(int plotn, bool createImage=false) {   
+     int hits = 0; 
+     int image[nZeniths][nZeniths]; 
+     for(int i1=0; i1 <  nZeniths; i1++ ){
+       for(int i2=0; i2 <  nAzimuths; i2++ ){
+         if(this->domes[plotn][i1][i2] > 0) hits++;
+         if(createImage){
+           image[nZeniths][nZeniths]=ceil((image[nZeniths][nZeniths] + hits)/2);
+         }
+       }
+     }
+     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
+     dome2tiff(plotn, *image); 
+       
+     return(true); 
+   };
+   
+   void finalizePlotDomes(bool createImages=false, bool verbose=false) { 
      if(plotGapFraction==NULL){
       return; 
       }
       for(int i0=0; i0 <  nPlots; i0++ ){
-        plotGapFraction[i0] = 100.0 - ((double)sumPlotDome(i0) / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
         if(verbose) fprintf(stderr, "%.2f\t", plotGapFraction[i0]);
       } 
     };
-    // void initialize(int azimuths, int zeniths, plots){
-    //   this->nAzimuths=azimuths;
-    //   this->nAzimuths=azimuths;
-    //   this->nAzimuths=azimuths;
-    //  };
+   
+ 
+   
+   
+   bool dome2tiff(int plotn, int *image, bool verbose=false){
+     //for(int plotn=0; plotn <  nPlots; plotn++ ){
+       char outfilename[1024];
+       char outfilename2[1024];
+       sprintf (outfilename, "Plot_%03d.tif", (plotn+1));
+       sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
+       TIFF *out= TIFFOpen(outfilename, "w");
+       TIFFSetField (out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
+       TIFFSetField(out, TIFFTAG_IMAGELENGTH, nZeniths);    // set the height of the image
+       TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
+       TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, sizeof(int));    // set the size of the channels
+       TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+       //   Some other essential fields to set that you do not have to understand for now.
+       TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+       TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+       
+       tmsize_t linebytes = sizeof(int) * nZeniths;     
+       int *buf = NULL;        // buffer used to store the row of pixel information for writing to file
+       //    Allocating memory to store the pixels of current row
+       if (TIFFScanlineSize(out)==linebytes)
+         buf =(int *)_TIFFmalloc(linebytes);
+       else
+         buf = (int *)_TIFFmalloc(TIFFScanlineSize(out));
+       
+       // We set the strip size of the file to be size of one row of pixels
+       TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, linebytes));
+       
+       //Now writing image to the file one strip at a time
+       for (int row = 0; row < nAzimuths; row++)
+       {
+         //&this->images[plotn][nAzimuths]
+         memcpy(buf, &image[nAzimuths], linebytes);    // check the index here, and figure out why not using h*linebytes
+         if (TIFFWriteScanline(out, buf, row, 0) < 0)
+           break;
+       }
+       
+       (void) TIFFClose(out);
+     //} 
+     return(true);
+     
+   }
 };
 
 
