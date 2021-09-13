@@ -10,7 +10,9 @@ Provides a simulated hemispherical photograph at user-defined positions in a poi
  - Download "lasHemisphericSIM" 
  - go to terminal and run 
     
-    lasHemispheriSIM -h
+        lasHemispheriSIM -h
+
+
     
     
 ### Compile from source   
@@ -27,6 +29,22 @@ Open "CMakeLists.txt" and add "lasHemisphericSIM" in the "set(TARGETS...)" chunk
       	lasexample_simple_classification
       	lasexample_write_only_with_extra_bytes)
 
-Recompile LASlib following instructions in LAStools.
+Recompile LASlib following instructions in LAStools (e.g. cmake ../ and make) .
 
-## Compilation
+## Usage
+
+### Canopy and vegetation
+   
+Please make sure you use a **normalized** point cloud, in LAS or LAZ format, if you want to focus on canopy light transmission.
+
+
+## PP
+
+This tool was created in the context of two projects, 
+
+CONAF ...
+VARCITIES ... 
+
+## Contacts   
+
+Contact <a href=mailto:francesco.pirotti@unipd.it>AUTHOR</a> or visit https://www.cirgeo.unipd.it for more info and links to social-media. 
