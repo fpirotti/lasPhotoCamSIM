@@ -31,14 +31,16 @@ Open "CMakeLists.txt" and add "lasHemisphericSIM" in the "set(TARGETS...)" chunk
 
 Recompile LASlib following instructions in LAStools (e.g. cmake ../ and make) .
 
-## Usage
+## Usage and description
+
+This tools basically estimates how much direct light arrives at a certain spot/plot.  
 
 ### Canopy and vegetation
    
 Please make sure you use a **normalized** point cloud, in LAS or LAZ format, if you want to focus on canopy light transmission.
 
 
-## PP
+## Acknowledgements
 
 This tool was created in the context of two projects, 
 
