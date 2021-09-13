@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
         lasreader->point.compute_coordinates();
         // convert to plot center reference
         original2plotCoords(&lasreader->point, x[i], y[i]); 
-        collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i);
+        collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i, true);
       
       } 
       
@@ -222,13 +222,8 @@ int main(int argc, char *argv[])
     delete lasreader;
   }
   
-   
   collector->finalizePlotDomes(true, true);  
   fclose(fpLocations);
-  
    
-  
-  printf( "\n\r"); 
-  printf( "\n\r"); 
   return 0;
 }

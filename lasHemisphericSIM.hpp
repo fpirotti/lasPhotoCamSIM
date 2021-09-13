@@ -63,7 +63,7 @@ class quantizer{
     int nZeniths;
     int nPlots;
     int ***domes; 
-    // int **images; 
+    int **images; 
     float *plotGapFraction; 
     
     quantizer(int az, int ze, int plots) { 
@@ -72,8 +72,8 @@ class quantizer{
       this->nAzimuths=az;
       this->nZeniths=ze;
       nPlots=plots;
-      this->domes = (int***)malloc(sizeof( *domes) * plots);  
-      // this->images = (int**)malloc(sizeof( *domes) * nZeniths);  
+      this->domes = (int***)malloc(sizeof( *domes) * plots);
+      this->images = (int**)malloc(sizeof( *images) * plots);  
       // this->images[i] = (int*)malloc(sizeof(*this->images[i]) * nZeniths); 
       if (this->domes  )
       {
@@ -82,14 +82,16 @@ class quantizer{
         {
           this->plotGapFraction[i]=0.0;
           this->domes[i] = (int**)malloc(sizeof(*this->domes[i])  * nZeniths);  
+          this->images[i] = (int*)malloc(sizeof( *images) * nZeniths); 
+          this->images[i] =  new int[(nZeniths* nZeniths)];  
+          memset( this->images[i], 0, (nZeniths* nZeniths)*sizeof(int) );
           if (this->domes[i] )
           {
             int j;
             for (j = 0; j < nZeniths; j++)
             {
-              this->domes[i][j] =  new int[nAzimuths]; //(int*)malloc(sizeof( *this->domes[i][j]) * nAzimuths);
-              memset( this->domes[i][j], 0, (nZeniths)*sizeof(int) );
-              // this->images[j] = new int[nZeniths]; // (int*)malloc(sizeof( *this->images[i][j]) * nZeniths);
+              this->domes[i][j] =  new int[nAzimuths];  
+              memset( this->domes[i][j], 0, (nAzimuths)*sizeof(int) );
             }
           }
         }
@@ -97,73 +99,79 @@ class quantizer{
     }; 
      
      
-    arrIdx polar2plane(int az, int zen, int gridWH=0, bool verbose=false) {  
+    arrIdx polar2plane(double az, double zen, int gridWH=0, bool verbose=false) {  
        arrIdx ptProjected;
        if(gridWH==0){
-         gridWH = nAzimuths;
-         if(verbose) fprintf(stderr, "WARNING: no size of projection grid, defaulting to %d;\n", nAzimuths );
+         gridWH = nZeniths;
+         if(verbose) fprintf(stderr, "WARNING: no size of projection grid, defaulting to %d;\n", nZeniths );
        } 
        double az1 = deg2rad( ((double)az - 180.0) );
        double zen1 = deg2rad( (double)zen );
        
-       if( az < 0 || az > 359 || zen < 0 || zen > 179  ) {
-         fprintf(stderr, "WARNING: az=%d, z=%d\n", az, zen);
-         fprintf(stderr, "WARNING: az=%d, z=%d\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
+       if( az < 0 || az >= 360.0 || zen < 0 || zen >= 90.0  ) {
+         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\n", az, zen);
+         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
        }
        
-       ptProjected.row = (int)(floor((sin(zen1)*cos(az1) * (double)nZeniths + (double)nZeniths)/2.0 ) );
-       ptProjected.col = (int)(floor((sin(zen1)*sin(az1) * (double)nZeniths + (double)nZeniths)/2.0 ) );
-       if(ptProjected.row==nZeniths) ptProjected.row--;
-       if(ptProjected.col==nZeniths) ptProjected.col--;
+       ptProjected.row = (int)(floor(( (sin(zen1)*cos(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
+       ptProjected.col = (int)(floor(( (sin(zen1)*sin(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
+       if(ptProjected.row==gridWH) ptProjected.row--;
+       if(ptProjected.col==gridWH) ptProjected.col--;
        
-       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (nZeniths-1) || ptProjected.col  > (nZeniths-1) ) {
-         fprintf(stderr, "WARNING: az=%d, z=%d\n", az, zen);
-         fprintf(stderr, "WARNING: az=%d, z=%d\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
+       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (gridWH-1) || ptProjected.col  > (gridWH-1) ) {
+         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
        }
        return(ptProjected);
      };
      
-   void fillDomeGrid2(float az, float zen, int plotn=0){
+   void fillDomeGrid2(double az, double zen, int plotn=0, bool createImage=false){
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
-     int z= (int)(floor(zen));
+     // NB zenith is from 0 to 90 ( asin of positive values between 0 and 1) so we scale to nZeniths... e.g. if 180 nZeniths, zenith*2
+     int z= (int)(floor(zen*((double)nZeniths/90.0)));
      if(z==nZeniths) z--;
      if ( this->domes[plotn][z][a] < (INT32_MAX - 1)) {
        this->domes[plotn][z][a]++;
      } 
+     
+     if(createImage){
+       arrIdx idx;
+       idx = polar2plane( az, zen, this->nZeniths );
+       int fidx = nZeniths*idx.row+idx.col;
+       images[plotn][fidx]++;
+     }
+     
    }; 
    
-   void fillDomeGrid(polarCoordinate p, int plotn=0){
-     fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
+   void fillDomeGrid(polarCoordinate p, int plotn=0, bool createImage=false){
+     fillDomeGrid2( p.azimuth  , p.zenith ,   plotn, createImage );
    }; 
    
    bool finalizePlotDome(int plotn, bool createImage=false, bool verbose=false) {   
      int hits = 0; 
-     int imagea[(nZeniths*nZeniths)];
-     memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
+     // int imagea[(nZeniths*nZeniths)];
+     // memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
       
-     arrIdx idx;
+     // arrIdx idx;
      for(int z=0; z <  nZeniths; z++ ){
-       
        for(int az=0; az <  nAzimuths; az++ ){
          if(this->domes[plotn][z][az] > 0) hits++;
-         if(createImage){
-           idx = polar2plane( az, z/4, this->nZeniths );
-           int fidx = nZeniths*idx.row+idx.col;
-           if( imagea[fidx]!=0 ) imagea[fidx]  =   (int)(ceil((imagea[fidx] + this->domes[plotn][z][az])/2.0));
-           else imagea[fidx] = this->domes[plotn][z][az];
-          }
+         // if(createImage){
+         //   idx = polar2plane( az, z, this->nZeniths );
+         //   int fidx = nZeniths*idx.row+idx.col;
+         //   if( imagea[fidx]!=0 ) imagea[fidx]  =   (int)(ceil((imagea[fidx] + this->domes[plotn][z][az])/2.0));
+         //   else imagea[fidx] = this->domes[plotn][z][az];
+         //  }
         }
       }
      
      // fprintf(stderr, "\nuset ..%d  \n", imagea[(nZeniths*nZeniths)] );
-    //  fprintf(stderr, "\nuset ..%d  \n", imagea[32395] );
-    //  
+    //  fprintf(stderr, "\nuset ..%d  \n", imagea[32395] ); 
     //  getc(stdin);
      this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
-     if(createImage){  
-       dome2tiff(plotn,  imagea , verbose); 
-     } 
+     if(createImage){
+       dome2tiff(plotn,  images[plotn] , verbose);
+     }
      return(true); 
    };
    
@@ -328,8 +336,8 @@ polarCoordinate crtPlot2polar(LASpoint *pt) {
     pol.azimuth = 0;
     pol.zenith = 0;
   } else{ 
-    pol.azimuth = rad2deg( atan2(pt->coordinates[0],pt->coordinates[1]) )+180.0;
-    pol.zenith = rad2deg( asin(pt->coordinates[2] / distance3d(pt)) )*2;
+    pol.azimuth = rad2deg( atan2(pt->coordinates[1],pt->coordinates[0]) )+180.0;
+    pol.zenith =  rad2deg( acos(pt->coordinates[2] / distance3d(pt)) );
   }
   return(pol);
 }
