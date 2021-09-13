@@ -88,6 +88,7 @@ class quantizer{
             for (j = 0; j < nZeniths; j++)
             {
               this->domes[i][j] =  new int[nAzimuths]; //(int*)malloc(sizeof( *this->domes[i][j]) * nAzimuths);
+              memset( this->domes[i][j], 0, (nZeniths)*sizeof(int) );
               // this->images[j] = new int[nZeniths]; // (int*)malloc(sizeof( *this->images[i][j]) * nZeniths);
             }
           }
@@ -104,12 +105,21 @@ class quantizer{
        } 
        double az1 = deg2rad( ((double)az - 180.0) );
        double zen1 = deg2rad( (double)zen );
-       ptProjected.row = (int)(floor((sin(zen1)*cos(az1) * (double)nZeniths/2.0 + (double)nZeniths/2.0) ));
-       ptProjected.col = (int)(floor((sin(zen1)*sin(az1) * (double)nZeniths/2.0 + (double)nZeniths/2.0) ));
+       
+       if( az < 0 || az > 359 || zen < 0 || zen > 179  ) {
+         fprintf(stderr, "WARNING: az=%d, z=%d\n", az, zen);
+         fprintf(stderr, "WARNING: az=%d, z=%d\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
+       }
+       
+       ptProjected.row = (int)(floor((sin(zen1)*cos(az1) * (double)nZeniths + (double)nZeniths)/2.0 ) );
+       ptProjected.col = (int)(floor((sin(zen1)*sin(az1) * (double)nZeniths + (double)nZeniths)/2.0 ) );
        if(ptProjected.row==nZeniths) ptProjected.row--;
        if(ptProjected.col==nZeniths) ptProjected.col--;
-       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (nZeniths-1) || ptProjected.col  > (nZeniths-1) ) 
+       
+       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (nZeniths-1) || ptProjected.col  > (nZeniths-1) ) {
+         fprintf(stderr, "WARNING: az=%d, z=%d\n", az, zen);
          fprintf(stderr, "WARNING: az=%d, z=%d\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
+       }
        return(ptProjected);
      };
      
@@ -120,33 +130,40 @@ class quantizer{
      if(z==nZeniths) z--;
      if ( this->domes[plotn][z][a] < (INT32_MAX - 1)) {
        this->domes[plotn][z][a]++;
-     }
-     
-  }; 
+     } 
+   }; 
+   
    void fillDomeGrid(polarCoordinate p, int plotn=0){
      fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
    }; 
    
    bool finalizePlotDome(int plotn, bool createImage=false, bool verbose=false) {   
      int hits = 0; 
-     int image[nZeniths*nZeniths]; 
+     int imagea[(nZeniths*nZeniths)];
+     memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
+      
+     arrIdx idx;
      for(int z=0; z <  nZeniths; z++ ){
+       
        for(int az=0; az <  nAzimuths; az++ ){
          if(this->domes[plotn][z][az] > 0) hits++;
          if(createImage){
-           // fprintf(stderr, "%d %d\n", z, az);
- 
-           arrIdx idx = polar2plane( az, z, this->nZeniths );
-           image[nZeniths*idx.row+idx.col]=ceil((image[nZeniths*z+az] + hits)/2);
-         }
-       }
-     }
+           idx = polar2plane( az, z/4, this->nZeniths );
+           int fidx = nZeniths*idx.row+idx.col;
+           if( imagea[fidx]!=0 ) imagea[fidx]  =   (int)(ceil((imagea[fidx] + this->domes[plotn][z][az])/2.0));
+           else imagea[fidx] = this->domes[plotn][z][az];
+          }
+        }
+      }
+     
+     // fprintf(stderr, "\nuset ..%d  \n", imagea[(nZeniths*nZeniths)] );
+    //  fprintf(stderr, "\nuset ..%d  \n", imagea[32395] );
+    //  
+    //  getc(stdin);
      this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
-     if(createImage){ 
-       dome2tiff(plotn, image, verbose);
-     }
-    
-       
+     if(createImage){  
+       dome2tiff(plotn,  imagea , verbose); 
+     } 
      return(true); 
    };
    
@@ -165,6 +182,7 @@ class quantizer{
    
    bool dome2tiff(int plotn, int *image, bool verbose=false){
      
+     
        char outfilename[1024];
        char outfilename2[1024];
         
@@ -172,12 +190,12 @@ class quantizer{
         if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
        sprintf (outfilename, "Plot_%03d.tif", (plotn+1));
        sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
-       TIFF *out= TIFFOpen(outfilename, "w");
+       TIFF *out= TIFFOpen(outfilename, "wb");
 
        TIFFSetField (out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
        TIFFSetField(out, TIFFTAG_IMAGELENGTH, nZeniths);    // set the height of the image
        TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
-       TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, sizeof(int)*8);    // set the size of the channels
+       TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 32);    // set the size of the channels
        TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
        //   Some other essential fields to set that you do not have to understand for now.
        TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
@@ -186,20 +204,28 @@ class quantizer{
        tmsize_t linebytes = sizeof(int) * nZeniths;     
        int *buf = NULL;        // buffer used to store the row of pixel information for writing to file
        //    Allocating memory to store the pixels of current row
-       if (TIFFScanlineSize(out)==linebytes)
+       if (TIFFScanlineSize(out)==linebytes){
          buf =(int *)_TIFFmalloc(linebytes);
-       else
-         buf = (int *)_TIFFmalloc(TIFFScanlineSize(out));
-       
+       } else{
+         buf = (int *)_TIFFmalloc(TIFFScanlineSize(out));  
+         fprintf(stderr, "WARNING 2  %ld  %ld  %ld\n",  TIFFScanlineSize(out), TIFFScanlineSize(out), linebytes ) ;
+       }
        // We set the strip size of the file to be size of one row of pixels
        TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, linebytes));
-
+       // if(verbose) fprintf(stderr, "Do  %d\n",  image[11] ) ;
        //Now writing image to the file one strip at a time
        for (int row = 0; row < nZeniths; row++)
        { 
-         memcpy(buf, &image[row], linebytes);    // check the index here, and figure out why not using h*linebytes
-         if (TIFFWriteScanline(out, buf, row, 0) < 0)
+         // if(verbose) fprintf(stderr, "Do  %d\n",  image[row+10] ) ; 
+         memcpy(buf, &image[nZeniths*row], linebytes);    // check the index here, and figure out why not using h*linebytes
+         if (TIFFWriteScanline(out, buf, row, 0) < 0){
+            if(verbose){ 
+              fprintf(stderr, "WARNING  %d\n",  row ) ;
+              fprintf(stderr,"<press ENTER>\n");
+              getc(stdin);
+              }
            break; 
+           }
        }
         
        TIFFClose(out); 
@@ -303,7 +329,7 @@ polarCoordinate crtPlot2polar(LASpoint *pt) {
     pol.zenith = 0;
   } else{ 
     pol.azimuth = rad2deg( atan2(pt->coordinates[0],pt->coordinates[1]) )+180.0;
-    pol.zenith = rad2deg( asin(pt->coordinates[2] / distance3d(pt)) );
+    pol.zenith = rad2deg( asin(pt->coordinates[2] / distance3d(pt)) )*2;
   }
   return(pol);
 }

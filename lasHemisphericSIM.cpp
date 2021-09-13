@@ -181,16 +181,14 @@ int main(int argc, char *argv[])
       byebye(argc==1);
     }
     
-    
-    
-
-    
+    int q = 100;
+    if( lasreader->npoints > 100000000 ) q=1000;
     // loop over points and modify them
-    int progress = lasreader->npoints/100;
+    int progress = lasreader->npoints/q;
 
     // fprintf(stderr,"<press ENTER %d -- >\n", collector->nPlots );
     // getc(stdin);
-    //   
+     
     while (lasreader->read_point())
     {   
       if(lasreader->point.get_z() < 1){
@@ -209,11 +207,11 @@ int main(int argc, char *argv[])
       
       if ( progress && ((lasreader->p_count % progress) == 0))
       {
-        printf( "\b\b\b%02d%%",  (int)(((float)lasreader->p_count/(float)lasreader->npoints)*100.0) ); 
+        if(q==1000) fprintf(stderr, "\b\b\b\b\b\b\b\b\b\b%03d / 1000",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*1000.0)) ;
+        else  fprintf(stderr, "\b\b\b%02d%%",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*q)) ;
       }
     } 
-    
-    printf( "\b\b\b100%%\n");  
+     
     #ifdef _WIN32
       if (verbose) fprintf(stderr,"total time: %g sec   for %I64d points\n", taketime()-start_time,   lasreader->p_count);
     #else
