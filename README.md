@@ -17,19 +17,26 @@ Provides a simulated hemispherical photograph at user-defined positions in a poi
     
 ### Compile from source   
 
-If you want to compile from source, add these files in the "example" directory of LASlib in LAStools. 
+If you want to compile from source, compile first LAStools/LASlib add these files in the "example" directory of LASlib in LAStools. 
 
-Open "CMakeLists.txt" and add "lasHemisphericSIM" in the "set(TARGETS...)" chunk. E.g.:
+Go to the "example" directory (<LAStools install dir>/LASlib/example).  
+Open "Makefile" and modify: 
          
-      set(TARGETS
-      	lasexample
-      	**lasHemisphericSIM**
-      	lasexample_write_only
-      	lasexample_add_rgb
-      	lasexample_simple_classification
-      	lasexample_write_only_with_extra_bytes)
+      all: lasexample lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
 
-Recompile LASlib following instructions in LAStools (e.g. cmake ../ and make) .
+to 
+
+      all: lasexample lasHemisphericSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
+
+and right after add:
+
+      lasHemisphericSIM: lasHemisphericSIM.o
+      	${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas -ltiff -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
+
+
+You should be able then to run successfully "make lasHemisphericSIM" in the directory and create the executable.
+
+
 
 ## Usage and description
 
