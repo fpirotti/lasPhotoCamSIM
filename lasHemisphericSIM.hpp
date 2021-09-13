@@ -31,6 +31,20 @@ struct point
   double z;
 };
 
+struct arrIdx
+{
+  int row=-1;
+  int col=-1; 
+};
+
+const double deg2rad(double x) {
+  return(x * (M_PI/180.0)); 
+}
+
+const double rad2deg(double x) {
+  return(x * (180.0/M_PI)); 
+}
+
 struct polarCoordinate
 {
   double azimuth=0;
@@ -49,7 +63,7 @@ class quantizer{
     int nZeniths;
     int nPlots;
     int ***domes; 
-    int ***images; 
+    // int **images; 
     float *plotGapFraction; 
     
     quantizer(int az, int ze, int plots) { 
@@ -59,29 +73,46 @@ class quantizer{
       this->nZeniths=ze;
       nPlots=plots;
       this->domes = (int***)malloc(sizeof( *domes) * plots);  
-      this->images = (int***)malloc(sizeof( *domes) * plots);  
-      if (this->domes && this->images)
+      // this->images = (int**)malloc(sizeof( *domes) * nZeniths);  
+      // this->images[i] = (int*)malloc(sizeof(*this->images[i]) * nZeniths); 
+      if (this->domes  )
       {
         int i;
         for (i = 0; i < plots; i++)
         {
           this->plotGapFraction[i]=0.0;
-          this->domes[i] = (int**)malloc(sizeof(*this->domes[i]) * nZeniths); // type of *arr[i] is T *
-          this->images[i] = (int**)malloc(sizeof(*this->images[i]) * nZeniths * nZeniths); // type of *arr[i] is T *
-          if (this->domes[i] && this->images[i])
+          this->domes[i] = (int**)malloc(sizeof(*this->domes[i])  * nZeniths);  
+          if (this->domes[i] )
           {
             int j;
             for (j = 0; j < nZeniths; j++)
             {
               this->domes[i][j] =  new int[nAzimuths]; //(int*)malloc(sizeof( *this->domes[i][j]) * nAzimuths);
-              this->images[i][j] = new int[nZeniths]; // (int*)malloc(sizeof( *this->images[i][j]) * nZeniths);
+              // this->images[j] = new int[nZeniths]; // (int*)malloc(sizeof( *this->images[i][j]) * nZeniths);
             }
           }
         }
       }
     }; 
      
-
+     
+    arrIdx polar2plane(int az, int zen, int gridWH=0, bool verbose=false) {  
+       arrIdx ptProjected;
+       if(gridWH==0){
+         gridWH = nAzimuths;
+         if(verbose) fprintf(stderr, "WARNING: no size of projection grid, defaulting to %d;\n", nAzimuths );
+       } 
+       double az1 = deg2rad( ((double)az - 180.0) );
+       double zen1 = deg2rad( (double)zen );
+       ptProjected.row = (int)(floor((sin(zen1)*cos(az1) * (double)nZeniths/2.0 + (double)nZeniths/2.0) ));
+       ptProjected.col = (int)(floor((sin(zen1)*sin(az1) * (double)nZeniths/2.0 + (double)nZeniths/2.0) ));
+       if(ptProjected.row==nZeniths) ptProjected.row--;
+       if(ptProjected.col==nZeniths) ptProjected.col--;
+       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (nZeniths-1) || ptProjected.col  > (nZeniths-1) ) 
+         fprintf(stderr, "WARNING: az=%d, z=%d\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
+       return(ptProjected);
+     };
+     
    void fillDomeGrid2(float az, float zen, int plotn=0){
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
@@ -96,19 +127,25 @@ class quantizer{
      fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
    }; 
    
-   bool finalizePlotDome(int plotn, bool createImage=false) {   
+   bool finalizePlotDome(int plotn, bool createImage=false, bool verbose=false) {   
      int hits = 0; 
-     int image[nZeniths][nZeniths]; 
-     for(int i1=0; i1 <  nZeniths; i1++ ){
-       for(int i2=0; i2 <  nAzimuths; i2++ ){
-         if(this->domes[plotn][i1][i2] > 0) hits++;
+     int image[nZeniths*nZeniths]; 
+     for(int z=0; z <  nZeniths; z++ ){
+       for(int az=0; az <  nAzimuths; az++ ){
+         if(this->domes[plotn][z][az] > 0) hits++;
          if(createImage){
-           image[nZeniths][nZeniths]=ceil((image[nZeniths][nZeniths] + hits)/2);
+           // fprintf(stderr, "%d %d\n", z, az);
+ 
+           arrIdx idx = polar2plane( az, z, this->nZeniths );
+           image[nZeniths*idx.row+idx.col]=ceil((image[nZeniths*z+az] + hits)/2);
          }
        }
      }
      this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
-     dome2tiff(plotn, *image); 
+     if(createImage){ 
+       dome2tiff(plotn, image, verbose);
+     }
+    
        
      return(true); 
    };
@@ -118,7 +155,7 @@ class quantizer{
       return; 
       }
       for(int i0=0; i0 <  nPlots; i0++ ){
-        finalizePlotDome(i0, createImages);
+        finalizePlotDome(i0, createImages, verbose);
         if(verbose) fprintf(stderr, "%.2f\t", plotGapFraction[i0]);
       } 
     };
@@ -127,16 +164,20 @@ class quantizer{
    
    
    bool dome2tiff(int plotn, int *image, bool verbose=false){
-     //for(int plotn=0; plotn <  nPlots; plotn++ ){
+     
        char outfilename[1024];
        char outfilename2[1024];
+        
+        
+        if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
        sprintf (outfilename, "Plot_%03d.tif", (plotn+1));
        sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
        TIFF *out= TIFFOpen(outfilename, "w");
+
        TIFFSetField (out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
        TIFFSetField(out, TIFFTAG_IMAGELENGTH, nZeniths);    // set the height of the image
        TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
-       TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, sizeof(int));    // set the size of the channels
+       TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, sizeof(int)*8);    // set the size of the channels
        TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
        //   Some other essential fields to set that you do not have to understand for now.
        TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
@@ -152,18 +193,21 @@ class quantizer{
        
        // We set the strip size of the file to be size of one row of pixels
        TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, linebytes));
-       
+
        //Now writing image to the file one strip at a time
-       for (int row = 0; row < nAzimuths; row++)
-       {
-         //&this->images[plotn][nAzimuths]
-         memcpy(buf, &image[nAzimuths], linebytes);    // check the index here, and figure out why not using h*linebytes
+       for (int row = 0; row < nZeniths; row++)
+       { 
+         memcpy(buf, &image[row], linebytes);    // check the index here, and figure out why not using h*linebytes
          if (TIFFWriteScanline(out, buf, row, 0) < 0)
-           break;
+           break; 
        }
-       
-       (void) TIFFClose(out);
-     //} 
+        
+       TIFFClose(out); 
+       if (buf)
+         _TIFFfree(buf);
+       if(verbose) fprintf(stderr, "Done image for plot %d\n", plotn); 
+     
+     if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
      return(true);
      
    }
@@ -186,13 +230,6 @@ void usage(bool wait=false)
   exit(1);
 }
 
-const double deg2rad(double x) {
-  return(x * (M_PI/180.0)); 
-}
-
-const double rad2deg(double x) {
-  return(x * (180.0/M_PI)); 
-}
 
 
  
@@ -271,6 +308,7 @@ polarCoordinate crtPlot2polar(LASpoint *pt) {
   return(pol);
 }
 
+ 
 void crt2ort(LASpoint *pt) {
   double sq = sqrt(pt->coordinates[0]*pt->coordinates[0] + pt->coordinates[1]*pt->coordinates[1] + pt->coordinates[2]*pt->coordinates[2]);
   pt->coordinates[0] = ( pt->coordinates[0]/ sq );

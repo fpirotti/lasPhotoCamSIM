@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
          
         lasreader->point.compute_coordinates();
         // convert to plot center reference
-        original2plotCoords(&lasreader->point, x[i], y[i]);
+        original2plotCoords(&lasreader->point, x[i], y[i]); 
         collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i);
       
       } 
@@ -213,8 +213,7 @@ int main(int argc, char *argv[])
       }
     } 
     
-    printf( "\b\b\b100%%"); 
-    printf( "\n\r");  
+    printf( "\b\b\b100%%\n");  
     #ifdef _WIN32
       if (verbose) fprintf(stderr,"total time: %g sec   for %I64d points\n", taketime()-start_time,   lasreader->p_count);
     #else
@@ -224,10 +223,12 @@ int main(int argc, char *argv[])
     lasreader->close();
     delete lasreader;
   }
+  
+   
+  collector->finalizePlotDomes(true, true);  
   fclose(fpLocations);
   
    
-  collector->finalizePlotDomes(true, true); 
   
   printf( "\n\r"); 
   printf( "\n\r"); 
