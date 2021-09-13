@@ -118,6 +118,7 @@ class quantizer{
       return; 
       }
       for(int i0=0; i0 <  nPlots; i0++ ){
+        finalizePlotDome(i0, createImages);
         if(verbose) fprintf(stderr, "%.2f\t", plotGapFraction[i0]);
       } 
     };
