@@ -1,7 +1,19 @@
 # lasHemisphericSIM
 Provides a simulated hemispherical photograph at user-defined positions in a point cloud. 
 
-## Compilation
+## Installation instruction
+
+### Install
+
+#### LINUX 
+ - Make sure you have laslib (from LAStools) and libgeotiff in the system. 
+ - Download "lasHemisphericSIM" 
+ - go to terminal and run 
+    
+    lasHemispheriSIM -h
+    
+    
+### Compile from source   
 
 If you want to compile from source, add these files in the "example" directory of LASlib in LAStools. 
 
