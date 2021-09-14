@@ -127,4 +127,4 @@ VARCITIES ...
 ## Contacts   
 
 Contact <a href=mailto:francesco.pirotti@unipd.it>AUTHOR</a> or visit (https://www.cirgeo.unipd.it)[https://www.cirgeo.unipd.it]
-for more info and links to social-media, (Facebook)[https://www.facebook.com/cirgeo.unipd] or (Instagram)[https://www.instagram.com/cirgeo.unipd/]. 
+for more info and links to social-media, [Facebook](https://www.facebook.com/cirgeo.unipd) or [Instagram](https://www.instagram.com/cirgeo.unipd/). 
