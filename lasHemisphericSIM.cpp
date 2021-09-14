@@ -297,7 +297,10 @@ int main(int argc, char *argv[])
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS*mult, nPositions, plotPositions, zCam, zenCut,  createRasters, toLog,  toDb, weight); 
+  
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS*mult, nPositions, plotPositions, 
+                                       zCam, zenCut,  createRasters, toLog,  toDb, weight,
+                                       file_name_location ); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   
@@ -360,8 +363,10 @@ int main(int argc, char *argv[])
     lasreader->close();
     delete lasreader;
   }
+  
   fprintf(stderr, "\b\b\b100%%\n\nFINALIZING.....\n" );
   float *gapFractions;
+  
   gapFractions = collector->finalizePlotDomes(true);  
   
   fpLocations = fopen(file_name_location, "r"); 

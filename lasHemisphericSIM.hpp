@@ -74,12 +74,19 @@ class quantizer{
     float weight=1.0;
     point *plotCenters;
     float *plotGapFraction; 
+    char *basename;
     
-    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, bool cRaster1=false, bool toLog1=false,  bool toDb1=false, float weight1=1.0,   int mult=1) { 
+    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, 
+              bool cRaster1=false, bool toLog1=false,  bool toDb1=false, 
+              float weight1=1.0,  char *basename1=NULL, int mult=1) { 
+      
       this->mult = mult;
       this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
       this->nZeniths=ze;
+      
+      this->basename=strdup(basename1);
+      
       this->cRaster=cRaster1;
       this->toLog=toLog1;
       this->toDb=toDb1;
@@ -94,6 +101,7 @@ class quantizer{
         fprintf(stderr, "You cannot set both log10 and dB transformations! Only log10 will be applied.\n");
         this->toDb=false;
       }
+      
       fprintf(stderr, "\n==============================\n"
                 "Setup with plot center (1st plot) %.5f %.5f \n"
                 "nZenith=%d  "
@@ -231,10 +239,13 @@ class quantizer{
      return(true); 
    };
    
+   
    float* finalizePlotDomes(bool verbose=false) { 
-     if(plotGapFraction==NULL){
-      return(NULL); 
-     }
+     
+      if(plotGapFraction==NULL){
+        return(NULL); 
+      }
+      
       for(int i0=0; i0 <  nPlots; i0++ ){
         finalizePlotDome(i0,  verbose);
         if(verbose) fprintf(stderr, "%.2f\n", plotGapFraction[i0]);
@@ -253,20 +264,19 @@ class quantizer{
    if(verbose) {
      fprintf(stderr, "Doing image for plot %d\n", plotn);
      if(this->toDb) fprintf(stderr, "Converting to dB ....\n"); 
-     if(this->toLog) fprintf(stderr, "Converting to log10 ....\n"); 
-     
+     if(this->toLog) fprintf(stderr, "Converting to log10 ....\n");  
    }   
    
    // char ext[5] = ".asc";
    
    if(this->toDb){
-    sprintf (outfilenamet,  "Plot_%03d_dB", (plotn+1));
+    sprintf (outfilenamet,  "%s.%03d_dB", basename,  (plotn+1));
    } 
    else if(this->toLog){
-     sprintf (outfilenamet,  "Plot_%03d_log10", (plotn+1));
+     sprintf (outfilenamet,  "%s.%03d_log10", basename, (plotn+1));
    }
    else {
-     sprintf (outfilenamet,  "Plot_%03d", (plotn+1));
+     sprintf (outfilenamet,  "%s.%03d", basename, (plotn+1));
    }
    
    if(this->weight!=0.0){
@@ -278,6 +288,7 @@ class quantizer{
    // sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
    
    FILE *out= fopen(outfilename, "w");
+   
    fprintf(out, "ncols         %d \n"
              "nrows         %d \n"
              "xllcorner     %f\n"
