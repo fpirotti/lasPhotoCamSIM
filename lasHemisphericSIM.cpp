@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
+  int mult=1;
   point plotPositions[100];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
@@ -100,6 +101,18 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i],"-db") == 0 )
     {
       toDb=true;
+    }
+    else if (strcmp(argv[i],"-mult") == 0 )
+    {
+      i++;
+      mult=atoi(argv[i]);
+      if(mult==0.0) {
+        fprintf(stderr, "ERROR:  argument -mult '%s'"
+                  " was converted to 0 which is not possible" 
+                  " - please check \n", 
+                  argv[i]);  
+        byebye(true, argc==1);
+      } 
     }
     else if (strcmp(argv[i],"-weight") == 0 )
     {
@@ -284,7 +297,7 @@ int main(int argc, char *argv[])
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, zCam, zenCut,  createRasters, toLog,  toDb, weight); 
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS*mult, nPositions, plotPositions, zCam, zenCut,  createRasters, toLog,  toDb, weight); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   

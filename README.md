@@ -1,7 +1,9 @@
 # lasHemisphericSIM
+
+
 Provides a simulated hemispherical photograph at user-defined positions in a point cloud. 
 
-<img src="img/output1.PNG" />
+<img src="./img1.jpg" />
 
 ## Installation instruction
 

@@ -94,7 +94,17 @@ class quantizer{
         fprintf(stderr, "You cannot set both log10 and dB transformations! Only log10 will be applied.\n");
         this->toDb=false;
       }
-      fprintf(stderr, "Plot 1 values %.5f %.5f | zCam=%.2f  zenCut=%.2f\n", plotCenters[0].x, plotCenters[0].y, this->zCam, this->zenCut);
+      fprintf(stderr, "\n==============================\n"
+                "Setup with plot center (1st plot) %.5f %.5f \n"
+                "nZenith=%d  "
+                "nAzimuths=%d  "
+                "zCam=%.2f  "
+                "zenCut=%.2f" 
+                "\n", plotCenters[0].x, plotCenters[0].y,
+                this->nZeniths,
+                this->nAzimuths,
+                this->zCam, 
+                this->zenCut);
       
       this->domes = (float***)malloc(sizeof( *domes)  * plots);
       if(this->cRaster)  this->images = (float**)malloc(sizeof( *images) * plots);  
@@ -105,11 +115,9 @@ class quantizer{
         for (i = 0; i < plots; i++)
         {
           this->plotGapFraction[i]=0.0;
-          this->domes[i] = (float**)malloc(sizeof(*this->domes[i])  * nZeniths * mult);   
+          this->domes[i] = (float**)malloc(sizeof(*this->domes[i])  * ZENITHS);   
           
           if(this->cRaster) {
-             
-   
             this->images[i] =  new float[(nZeniths*nZeniths*mult)];   
             // initialize nodata values -1 outside circle and zeros
             for(int iii=0; iii < (nZeniths*nZeniths*mult); iii++){
@@ -122,16 +130,15 @@ class quantizer{
               // fprintf(stderr,"<press %.f %d %d %.4f ENTER>\n", this->images[i][iii], x, y, d);
               // getc(stdin);
             }
-            
-            
           }
+          
           if (this->domes[i] )
           {
             int j;
-            for (j = 0; j < nZeniths; j++)
+            for (j = 0; j < ZENITHS; j++)
             {
-              this->domes[i][j] =  new float[nAzimuths];  
-              memset( this->domes[i][j], 0.0, (nAzimuths)*sizeof(float) );
+              this->domes[i][j] =  new float[AZIMUTHS];  
+              memset( this->domes[i][j], 0, (AZIMUTHS)*sizeof(float) );
             }
           }
         }
@@ -145,11 +152,11 @@ class quantizer{
          gridWH = nZeniths;
          if(verbose) fprintf(stderr, "WARNING: no size of projection grid, defaulting to %d;\n", nZeniths );
        } 
+       
        double az1 = deg2rad( ((double)az - 180.0) );
        double zen1 = deg2rad( (double)zen );
        
-       if( az < 0 || az >= 360.0 || zen < 0 || zen >= 90.0  ) {
-         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\n", az, zen);
+       if(verbose && (az < 0 || az > 360.0 || zen < 0 || zen >= 90.0)  ) {
          fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
        }
        
@@ -166,10 +173,13 @@ class quantizer{
      };
      
    void fillDomeGrid2(double az, double zen, double dist, int plotn=0){
+     
+     // counts for gap fraction are always 1°x1°
+     
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
      // NB zenith is from 0 to 90 ( asin of positive values between 0 and 1) so we scale to nZeniths... e.g. if 180 nZeniths, zenith*2
-     int z= (int)(floor(zen*((double)nZeniths/90.0)));
+     int z= (int)(floor(zen*2));
      if(z==nZeniths) z--;
      if ( this->domes[plotn][z][a] < (float)(INT32_MAX - 1)) {
        this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0/pow(dist,weight);
@@ -182,7 +192,6 @@ class quantizer{
        arrIdx idx;
        idx = polar2plane( az, zen, this->nZeniths );
        int fidx = nZeniths*idx.row+idx.col;
- 
        
        if(this->weight && dist>1.0) images[plotn][fidx]=images[plotn][fidx]+1.0/pow(dist,0.5);
        else images[plotn][fidx]=images[plotn][fidx]+1.0;
@@ -208,14 +217,14 @@ class quantizer{
      // int imagea[(nZeniths*nZeniths)];
      // memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
       
-     // arrIdx idx;
-     for(int z=0; z <  nZeniths; z++ ){
-       for(int az=0; az <  nAzimuths; az++ ){
+     // USING ZENITS because it is fixed 180 360... 180 because zenit is 0.5°;
+     for(int z=0; z <  ZENITHS; z++ ){
+       for(int az=0; az <  AZIMUTHS; az++ ){
          if(this->domes[plotn][z][az] > 0) hits++; 
-        }
-      }
+       }
+     }
       
-     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
+     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*ZENITHS) * 100.0) ;
      if(this->cRaster){
        dome2asc(plotn,  images[plotn] , verbose);
      }
@@ -275,8 +284,8 @@ class quantizer{
              "yllcorner     %f\n"
              "cellsize      %f \n"
              "NODATA_value  -1\n", nZeniths, nZeniths, 
-             (plotCenters[plotn].x - (float)nZeniths/2.0), 
-             (plotCenters[plotn].y - (float)nZeniths/2.0),
+             (plotCenters[plotn].x - (float)nZeniths/( (float)nZeniths/90.0) ), 
+             (plotCenters[plotn].y - (float)nZeniths/( (float)nZeniths/90.0) ),
              (180.0/(float)nZeniths) );
    
    for (int row = 0; row < nZeniths; row++)
