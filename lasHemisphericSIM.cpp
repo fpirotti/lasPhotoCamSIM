@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
   gapFractions = collector->finalizePlotDomes(true);  
   
   fpLocations = fopen(file_name_location, "r"); 
-  FILE *fpLocationsout = fopen(strcat(file_name_location,"_out"), "w"); 
+  FILE *fpLocationsout = fopen(strcat(file_name_location,".out"), "w"); 
   char line[1024];   
   char lineout[2048];
   fgets(line, 1024, fpLocations);
