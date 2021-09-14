@@ -31,7 +31,7 @@ to
 and right after add:
 
       lasHemisphericSIM: lasHemisphericSIM.o
-      	${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas -ltiff -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
+      	${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
 
 
 You should be able then to run successfully "make lasHemisphericSIM" in the directory and create the executable.

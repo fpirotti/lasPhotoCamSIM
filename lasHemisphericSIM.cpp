@@ -47,8 +47,9 @@ int main(int argc, char *argv[])
   FILE*  fpLocations;
   // FILE*  fpOutput;
   char file_name_location[256];
-  double x[100];
-  double y[100];
+  float zCam=1.3;
+  float zenCut=89.0;
+  point plotPositions[100];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
   
@@ -82,6 +83,26 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i],"-v") == 0 || strcmp(argv[i],"-verbose") == 0)
     {
       verbose = true;
+    } 
+    else if (strcmp(argv[i],"-zenCut") == 0)
+    { 
+      
+      i++;
+      zenCut=atof(argv[i]);
+      if(zenCut==0.0) {
+        fprintf(stderr, "WARNING:  argument -zenCut '%s' was converted to 0.0 zenith angle which means no field of view for camera (zenith angle 90° == horizon) - please check \n", 
+                argv[i]);  
+      }
+    } 
+    else if (strcmp(argv[i],"-zCam") == 0)
+    { 
+      
+      i++;
+      zCam=atof(argv[i]);
+      if(zCam==0.0) {
+        fprintf(stderr, "WARNING:  argument '-zCam %s' was converted to 0.0 camera height  - please check if this is what you want.\n", 
+                argv[i]);  
+      }
     } 
     else if (strcmp(argv[i],"-loc") == 0)
     { 
@@ -117,30 +138,97 @@ int main(int argc, char *argv[])
   } else {
     char line[2048];
     char *tmptokens[1024];
-    fprintf(stderr, "reading '%s'  \n", file_name_location); 
+    char  *token, *str, *tofree, *fsep;
+    
+    fgets(line, 1024, fpLocations);
+ 
+    line[strcspn(line, "\r\n")] = 0;
+    tofree = str = strdup((char*)(&line));  // We own str's memory now. 
+    fsep = strdup("aaa"); 
+    token = strtok(str, fsep);  
+ 
+    if(strlen(token)==strlen(line) ) {    
+      tofree = str = strdup((char*)(&line));    
+      fsep = strdup("\t");  
+      token = strtok(str, fsep); 
+    }  
+    
+    if(strlen(token)==strlen(line) ) {  
+      tofree = str = strdup((char*)(&line));   
+      fsep = strdup("|"); 
+      if(verbose) {
+        fprintf(stderr, "Testing separator '%s'\n", fsep); 
+      }
+      token = strtok(str, fsep); 
+    }  
+    
+    if(strlen(token)==strlen(line) ) {  
+      tofree = str = strdup((char*)(&line));   
+      fsep = strdup(";"); 
+      if(verbose) {
+        fprintf(stderr, "Testing separator '%s'\n", fsep); 
+      }
+      token = strtok(str, fsep); 
+    }  
+    
+    if(strlen(token)==strlen(line) ) {  
+      tofree = str = strdup((char*)(&line));   
+      fsep = strdup(":");
+      if(verbose) {
+        fprintf(stderr, "Testing separator '%s'\n", fsep); 
+      } 
+      token = strtok(str, fsep); 
+    } 
+    
+    if(strlen(token)==strlen(line) ) {  
+      tofree = str = strdup((char*)(&line));   
+      fsep = strdup(","); 
+      if(verbose) {
+        fprintf(stderr, "Testing separator '%s'\n", fsep); 
+      }
+      token = strtok(str, fsep); 
+    }  
+     
+    if(strlen(token)==strlen(line) )
+    {
+      fprintf(stderr, "ERROR: could not find separator of columns! Tested header '%s'\n", line); 
+      byebye(true, argc==1);
+    }
+ 
+  
+    if(verbose) {
+      fprintf(stderr, "Reading first line %s with separator '%s' \nin '%s'  \n", line, fsep, file_name_location); 
+    }
+
     while (fgets(line, 1024, fpLocations))
     { 
-      char *token, *str, *tofree, *fsep;
+      char *token, *str, *tofree;
       line[strcspn(line, "\r\n")] = 0;
       tofree = str = strdup((char*)(&line));  // We own str's memory now. 
-      if(strlen(strsep(&str, "\t"))!=strlen(str) ) fsep = strdup("\t");
+      if(strlen(line)< 4){
+        fprintf(stderr, "WARNING: Line with only %d characters, skipping...\n", (int)strlen(line)); 
+      } 
       int tok=0;
-      while ((token = strsep(&str, "\t"))) {
+      token = strtok(str, fsep);
+      while (token) {
         (tmptokens[tok])=strdup(token);  
         tok++;
         if(tok==20){
           fprintf(stderr, "ERROR: up to 20 columns supported, your table seems to have more!\n"); 
           byebye(true, argc==1);
         }
+        token = strtok(NULL, fsep);
       }
       
       if(tok<2){
         fprintf(stderr, "ERROR: at least 2 columns required (X and Y coordinates), without header line: your table seems to have only one. Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators. !\n"); 
         byebye(true, argc==1);
       } 
-      x[nPositions] =  atof( tmptokens[0] );  
-      y[nPositions] =  atof( tmptokens[1] );  
-      
+      plotPositions[nPositions].x =  atof( tmptokens[0] );  
+      plotPositions[nPositions].y =  atof( tmptokens[1] );  
+      if(plotPositions[nPositions].x==.0 || plotPositions[nPositions].y==.0){
+        fprintf(stderr, "WARNING: read coordinate with 0.0 value... make sure it is correct \n"); 
+      }
       free(tofree);
         
       if(nPositions>99){
@@ -162,7 +250,7 @@ int main(int argc, char *argv[])
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, 2); 
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, 2); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   
@@ -201,7 +289,7 @@ int main(int argc, char *argv[])
          
         lasreader->point.compute_coordinates();
         // convert to plot center reference
-        original2plotCoords(&lasreader->point, x[i], y[i]); 
+        original2plotCoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y); 
         collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i, true);
       
       } 
