@@ -9,29 +9,32 @@ Provides a simulated hemispherical photograph at user-defined positions in a poi
 
 ### Install
 
-#### LINUX 
- - Make sure you have laslib (from LAStools) and libgeotiff in the system. 
- - Download "lasHemisphericSIM" 
- - go to terminal and run 
-    
-        lasHemispheriSIM -h
+Download the compiled executable lasHemisphericSIM (linux) or lasHemisphericSIM.exe (Windows 64-bit compiled with MingW) and enjoy.
 
 
-    
-    
-### Compile from source   
+### Compile
 
-If you want to compile from source, compile first LAStools/LASlib add these files in the "example" directory of LASlib in LAStools. 
+To compile from source code clone this directory or download the CPP and HPP files and follow these instructions.
 
-Go to the "example" directory (<LAStools install dir>/LASlib/example).    
+#### LINUX   
 
-Open "Makefile" and modify: 
-         
+ - Download LAStools (https://rapidlasso.com/lastools/)[https://rapidlasso.com/lastools/]. 
+ - Compile LAStools/LASlib 
+    - go to LAStools directory and create a "build" directory (mkdir build)
+    - go in diredotry (cd build)
+    - use cmake (cmake ../) install it if you don't have it 
+    - make
+    - go to the "example" directory in LASlib (<LAStools install dir>/LASlib/example) and copy/move the lasHemisphericSIM.cpp and lasHemisphericSIM.hpp files there.
+    - Open "Makefile" file and modify contents: 
+
+
+*convert*          
+
   all: lasexample lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
 
 *to *
 
-  all: lasexample **lasHemisphericSIM** lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
+  all: lasexample lasHemisphericSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
 
 *and right after add:*
 
@@ -39,9 +42,11 @@ lasHemisphericSIM: lasHemisphericSIM.o
       	${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
 
 
-You should be able then to run successfully **"make lasHemisphericSIM"** in the directory and this creates the executable.
+You should be able then to run successfully the command **"make lasHemisphericSIM"** in the directory and this creates the executable.
 
-For **windows** the MingW co
+### WINDOWS
+
+Use  the MingW compiler chain and follow the steps like in linux.
 
 
 
@@ -49,7 +54,7 @@ For **windows** the MingW co
 
 This tools basically estimates how much direct light arrives at a certain spot/plot. User provides a CSV file with a list of coordinates and the tool converts the point cloud coordinates to polar coordinates and figures how much obstruction they create, by testing a number of "line of sight" directions that would correspond to pixels of a photo at zenithal (upward to the sky) direction using  fish-eye lens.   
 
-### **PARAMETERS**
+### PARAMETERS
 
 **-loc \<file path\>**: is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.
 
@@ -75,8 +80,10 @@ Example of **ouput** CSV file contents; the output file will be names *cameras.c
     726715.63;5140525.64;33.6
 
 
-
 **-orast**: exports 180x180 pixel rasters in ESRI GRID ASCII format. Pixels represent the point counts.   
+
+
+**-mult \<multiplier value\>**: *default=1* the output raster is 180x180 pixels, if you add "-mult 2" it will become 360x360 .... NB this does not influence the gap fraction calculation, which is fixed on a hemispheric dome divided in sectors 1° in azimunt and 0.5° in zenith angles. 
 
 **-log10**: converts pixel values, which represent point counts, to log10 scale (-orast must be also present) - formula is log10(pixelvalue+1). 
 Cells with no pixels (value=0) are thus given log(1) and have value 0 also after transformation.  This can be helpful as high zenith angles will obviously intersect a very high number of poitnts. Log-transformation can scale to better visualize results. 
