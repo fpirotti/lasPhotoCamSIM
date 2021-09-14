@@ -313,12 +313,14 @@ class quantizer{
 void usage(bool wait=false)
 {
   fprintf(stderr,"usage:\n");
-  fprintf(stderr,"lasHemisphericSIM -i in.las -loc plotPositions.csv -verbose -zCam 1.3 -zenithCut 89  \n"); 
+  fprintf(stderr,"lasHemisphericSIM -i in.las -loc plotPositions.csv -verbose  -zCam 1.3 -zenithCut 89 -orast -log \n"); 
   fprintf(stderr,"lasHemisphericSIM -h\n");
+  fprintf(stderr,"-orast exports 180x180 pixel rasters in ESRI GRID ASCII format. Pixels represent the point counts. \n");
+  fprintf(stderr,"-log converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
   fprintf(stderr,"-loc <file path> is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
   fprintf(stderr,"-zCam <height value in meters> default=1.3m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
   fprintf(stderr,"-zenCut <Zenith angle in degrees> default=89° \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle \n\t(e.g. at 1km distance any point lower than 17.5 m height with respect to the camera ) .  \n");
-  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images (not yet georeference with this version).  \n");
+  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images 180x180 pixels in ESRI GRID ASCII format (https://en.wikipedia.org/wiki/Esri_grid).  \n");
   fprintf(stderr,"Version 0.9: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
   if (wait)
   {

@@ -56,7 +56,9 @@ This tools basically estimates how much direct light arrives at a certain spot/p
     726717.3;5140225.1
     726715.63;5140525.64
 
+**-orast**: exports 180x180 pixel rasters in ESRI GRID ASCII format. Pixels represent the point counts.   
 
+**-log**: converts pixel values, which represent point counts, to natural log scale (-orast must be also present). This can be helpful as high zenith angles will obviously intersect a very high number of poitnts. Log-transformation can scale to better visualize results. 
 
 **-zCam \<height value in meters\>**: *default=1.3m* \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.
 
@@ -66,6 +68,8 @@ This tools basically estimates how much direct light arrives at a certain spot/p
 **-zenCut \<Zenith angle in degrees\>**: *default=89°* \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle \n\t(e.g. at 1km distance any point lower than 17.5 m height with respect to the camera ) . 
 
     -zenCut 89
+
+
 
 **Examples** 
 
