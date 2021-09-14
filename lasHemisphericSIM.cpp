@@ -106,7 +106,6 @@ int main(int argc, char *argv[])
     } 
     else if (strcmp(argv[i],"-loc") == 0)
     { 
-      
       i++;
       strcpy(file_name_location, argv[i]);
     } 

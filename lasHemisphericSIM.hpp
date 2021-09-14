@@ -213,7 +213,9 @@ class quantizer{
              "xllcorner     %f\n"
              "yllcorner     %f\n"
              "cellsize      1.0 \n"
-             "NODATA_value  -1\n", nZeniths, nZeniths, plotCenters[plotn].x, plotCenters[plotn].y );
+             "NODATA_value  -1\n", nZeniths, nZeniths, 
+             (plotCenters[plotn].x - (float)nZeniths/2.0), 
+             (plotCenters[plotn].y - (float)nZeniths/2.0) );
    
    for (int row = 0; row < nZeniths; row++)
    {  
@@ -307,7 +309,7 @@ class quantizer{
 void usage(bool wait=false)
 {
   fprintf(stderr,"usage:\n");
-  fprintf(stderr,"lasHemisphericSIM -i in.las -loc locations.csv -verbose -zCam 1.3 -zenithCut 89  \n"); 
+  fprintf(stderr,"lasHemisphericSIM -i in.las -loc plotPositions.csv -verbose -zCam 1.3 -zenithCut 89  \n"); 
   fprintf(stderr,"lasHemisphericSIM -h\n");
   fprintf(stderr,"-loc <file path> is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
   fprintf(stderr,"-zCam <height value in meters> default=1.3m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
