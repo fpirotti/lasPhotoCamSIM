@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(argv[i],"-weight") == 0 )
     {
+      i++;
       weight=atof(argv[i]);
       if(weight==0.0) {
         fprintf(stderr, "ERROR:  argument -weight '%s'"
