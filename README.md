@@ -58,7 +58,7 @@ This tools basically estimates how much direct light arrives at a certain spot/p
 
 ### PARAMETERS
 
-**-loc \<file path\>**: is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.
+**-loc \<file path\>**: is the path to a CSV file with X Y coordinates of camera locations - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.
 
 Example of CSV file contents from a file names *cameras.csv*:   
   
@@ -96,7 +96,11 @@ Cells with no pixels (value=0) are thus given log(1) and have value 0 also after
 **-zCam \<height value in meters\>**: *default=1.3m* \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground. 
 
 **-zenCut \<Zenith angle in degrees\>**: *default=89* \n\t- At zero (0) degrees zenith angle the direction points directly upwards, at 90 degrees it points at the horizong.  Thus 90 degrees zenith angle potentially will intercept  million of points: a smaller Zenith angle will ignore points lower than that angle (e.g. setting at 85 degrees will cut-off points that are below 5° from the horizon) . 
- 
+
+### OUTPUT
+
+  1. a CSV file with the file name  appended with  *.out* and file contents of original camera locations file with appended column with gap fraction values.
+  2. If *-orast*  is set, one ESRI GRID ASCII text file that can be loaded in a gis software. One file per plot. Center of grid is geolocated at camera position, but of course the size is not scaled.
  
 **Examples** 
 
