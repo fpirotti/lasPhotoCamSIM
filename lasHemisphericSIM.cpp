@@ -49,6 +49,8 @@ int main(int argc, char *argv[])
   char file_name_location[256];
   float zCam=1.3;
   float zenCut=89.0;
+  bool createRasters=false;
+  bool toLog=false;
   point plotPositions[100];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
@@ -84,6 +86,14 @@ int main(int argc, char *argv[])
     {
       verbose = true;
     } 
+    else if (strcmp(argv[i],"-orast") == 0 )
+    {
+      createRasters=true;
+    }
+    else if (strcmp(argv[i],"-log") == 0 )
+    {
+      toLog=true;
+    }
     else if (strcmp(argv[i],"-zenCut") == 0)
     { 
       

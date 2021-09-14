@@ -62,28 +62,42 @@ class quantizer{
     int nAzimuths;
     int nZeniths;
     int nPlots;
-    int ***domes; 
-    int **images; 
+    float ***domes; 
+    float **images; 
+    float maxvalue=.0;
     int mult=1;
     float zCam=1.3;
     float zenCut=89.0;
+    bool cRaster=false;
+    bool toLog=false;
+    bool toDb=false;
+    bool weight=false;
     point *plotCenters;
     float *plotGapFraction; 
     
-    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, int mult=1) { 
+    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, bool cRaster1=false, bool toLog1=false,  bool toDb1=false, bool weight1=false,   int mult=1) { 
       this->mult = mult;
       this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
       this->nZeniths=ze;
+      this->cRaster=cRaster1;
+      this->toLog=toLog1;
+      this->toDb=toDb1;
+      this->weight=weight1;
+      
       nPlots=plots;
       this->zCam=zCam1;
       this->zenCut=zenCut1;
       plotCenters = plotPositions; 
       
+      if(this->toDb && this->toLog){
+        fprintf(stderr, "You cannot set both log10 and dB transformations! Only log10 will be applied.\n");
+        this->toDb=false;
+      }
       fprintf(stderr, "Plot 1 values %.5f %.5f | zCam=%.2f  zenCut=%.2f\n", plotCenters[0].x, plotCenters[0].y, this->zCam, this->zenCut);
       
-      this->domes = (int***)malloc(sizeof( *domes)  * plots);
-      this->images = (int**)malloc(sizeof( *images) * plots);  
+      this->domes = (float***)malloc(sizeof( *domes)  * plots);
+      if(this->cRaster)  this->images = (float**)malloc(sizeof( *images) * plots);  
       // this->images[i] = (int*)malloc(sizeof(*this->images[i]) * nZeniths); 
       if (this->domes  )
       {
@@ -91,17 +105,19 @@ class quantizer{
         for (i = 0; i < plots; i++)
         {
           this->plotGapFraction[i]=0.0;
-          this->domes[i] = (int**)malloc(sizeof(*this->domes[i])  * nZeniths);  
-          // this->images[i] = (int*)malloc(sizeof( *images) * nZeniths); 
-          this->images[i] =  new int[(nZeniths*nZeniths*mult)];  
-          memset( this->images[i], -1, (nZeniths* nZeniths*mult)*sizeof(int) );
+          this->domes[i] = (float**)malloc(sizeof(*this->domes[i])  * nZeniths * mult);   
+          
+          if(this->cRaster) {
+            this->images[i] =  new float[(nZeniths*nZeniths*mult)];  
+            memset( this->images[i], -1.0, (nZeniths* nZeniths*mult)*sizeof(float) );
+          }
           if (this->domes[i] )
           {
             int j;
             for (j = 0; j < nZeniths; j++)
             {
-              this->domes[i][j] =  new int[nAzimuths];  
-              memset( this->domes[i][j], 0, (nAzimuths)*sizeof(int) );
+              this->domes[i][j] =  new float[nAzimuths];  
+              memset( this->domes[i][j], 0.0, (nAzimuths)*sizeof(float) );
             }
           }
         }
@@ -135,31 +151,34 @@ class quantizer{
        return(ptProjected);
      };
      
-   void fillDomeGrid2(double az, double zen, int plotn=0, bool createImage=false){
+   void fillDomeGrid2(double az, double zen, int plotn=0){
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
      // NB zenith is from 0 to 90 ( asin of positive values between 0 and 1) so we scale to nZeniths... e.g. if 180 nZeniths, zenith*2
      int z= (int)(floor(zen*((double)nZeniths/90.0)));
      if(z==nZeniths) z--;
-     if ( this->domes[plotn][z][a] < (INT32_MAX - 1)) {
-       this->domes[plotn][z][a]++;
+     if ( this->domes[plotn][z][a] < (float)(INT32_MAX - 1)) {
+       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0;
      } 
      
-     if(createImage){
+     if(maxvalue < this->domes[plotn][z][a]) maxvalue = this->domes[plotn][z][a];
+     
+     if(this->cRaster){
        arrIdx idx;
        idx = polar2plane( az, zen, this->nZeniths );
        int fidx = nZeniths*idx.row+idx.col;
-       images[plotn][fidx]++;
+       if(this->weight) images[plotn][fidx]=images[plotn][fidx]+1.0*;
+       else images[plotn][fidx]=images[plotn][fidx]+1.0;
      }
      
    }; 
    
-   void fillDomeGrid(polarCoordinate p, int plotn=0, bool createImage=false){
+   void fillDomeGrid(polarCoordinate p, int plotn=0 ){
      if(p.zenith > this->zenCut ) return;
-     fillDomeGrid2( p.azimuth  , p.zenith ,   plotn, createImage );
+     fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
    }; 
    
-   bool finalizePlotDome(int plotn, bool createImage=false, bool verbose=false) {   
+   bool finalizePlotDome(int plotn,   bool verbose=false) {   
      int hits = 0; 
      // int imagea[(nZeniths*nZeniths)];
      // memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
@@ -167,32 +186,23 @@ class quantizer{
      // arrIdx idx;
      for(int z=0; z <  nZeniths; z++ ){
        for(int az=0; az <  nAzimuths; az++ ){
-         if(this->domes[plotn][z][az] > 0) hits++;
-         // if(createImage){
-         //   idx = polar2plane( az, z, this->nZeniths );
-         //   int fidx = nZeniths*idx.row+idx.col;
-         //   if( imagea[fidx]!=0 ) imagea[fidx]  =   (int)(ceil((imagea[fidx] + this->domes[plotn][z][az])/2.0));
-         //   else imagea[fidx] = this->domes[plotn][z][az];
-         //  }
+         if(this->domes[plotn][z][az] > 0) hits++; 
         }
       }
-     
-     // fprintf(stderr, "\nuset ..%d  \n", imagea[(nZeniths*nZeniths)] );
-    //  fprintf(stderr, "\nuset ..%d  \n", imagea[32395] ); 
-    //  getc(stdin);
+      
      this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) this->nAzimuths*this->nZeniths) * 100.0) ;
-     if(createImage){
+     if(this->cRaster){
        dome2asc(plotn,  images[plotn] , verbose);
      }
      return(true); 
    };
    
-   void finalizePlotDomes(bool createImages=false, bool verbose=false) { 
+   void finalizePlotDomes(bool verbose=false) { 
      if(plotGapFraction==NULL){
       return; 
       }
       for(int i0=0; i0 <  nPlots; i0++ ){
-        finalizePlotDome(i0, createImages, verbose);
+        finalizePlotDome(i0,  verbose);
         if(verbose) fprintf(stderr, "%.2f\t", plotGapFraction[i0]);
       } 
     };
@@ -224,8 +234,19 @@ class quantizer{
    {  
      // memcpy(buf,  &image[nZeniths*row], linebytes);  
      for (int col = 0; col < nZeniths; col++){
-       fprintf(out, "%d " , (int)(image[nZeniths*row+col]) ) ; 
-      }
+       int v=((int)(image[nZeniths*row+col]));
+       
+       if(this->toLog){
+         fprintf(out, "%.6f " , log10((v+1)) ) ;
+         continue;
+        }
+       
+       if(this->toDb){
+         fprintf(out, "%.6f " ,  -10.0*log10((v+1) / maxvalue) ) ;
+         continue;
+       }
+      fprintf(out, "%d " , v) ; 
+     }
      fprintf(out, "\n"   ) ; 
     }
  
@@ -398,12 +419,14 @@ void crt2eqd(LASpoint *pt) {
 
 polarCoordinate crtPlot2polar(LASpoint *pt) {  
   polarCoordinate pol;
+  double dist = distance3d(pt);
+  pol.distance = dist;
   if( (pt->coordinates[0]==pt->coordinates[1]) && (pt->coordinates[1]==0.0) ){
     pol.azimuth = 0;
     pol.zenith = 0;
   } else{ 
     pol.azimuth = rad2deg( atan2(pt->coordinates[1],pt->coordinates[0]) )+180.0;
-    pol.zenith =  rad2deg( acos(pt->coordinates[2] / distance3d(pt)) );
+    pol.zenith =  rad2deg( acos(pt->coordinates[2] / dist) );
   }
   return(pol);
 }
