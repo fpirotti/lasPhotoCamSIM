@@ -71,11 +71,11 @@ class quantizer{
     bool cRaster=false;
     bool toLog=false;
     bool toDb=false;
-    bool weight=false;
+    float weight=1.0;
     point *plotCenters;
     float *plotGapFraction; 
     
-    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, bool cRaster1=false, bool toLog1=false,  bool toDb1=false, bool weight1=false,   int mult=1) { 
+    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, bool cRaster1=false, bool toLog1=false,  bool toDb1=false, float weight1=1.0,   int mult=1) { 
       this->mult = mult;
       this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
@@ -108,8 +108,22 @@ class quantizer{
           this->domes[i] = (float**)malloc(sizeof(*this->domes[i])  * nZeniths * mult);   
           
           if(this->cRaster) {
-            this->images[i] =  new float[(nZeniths*nZeniths*mult)];  
-            memset( this->images[i], -1.0, (nZeniths* nZeniths*mult)*sizeof(float) );
+             
+   
+            this->images[i] =  new float[(nZeniths*nZeniths*mult)];   
+            // initialize nodata values -1 outside circle and zeros
+            for(int iii=0; iii < (nZeniths*nZeniths*mult); iii++){
+              int y=floor(iii/nZeniths) - nZeniths/2.0;
+              int x=floor(iii%nZeniths) - nZeniths/2.0;
+              float d=sqrt(y*y + x*x);
+              if( d > nZeniths/2 ) this->images[i][iii] = -1.0f;
+              else this->images[i][iii] = 0.0f;
+              // 
+              // fprintf(stderr,"<press %.f %d %d %.4f ENTER>\n", this->images[i][iii], x, y, d);
+              // getc(stdin);
+            }
+            
+            
           }
           if (this->domes[i] )
           {
@@ -151,14 +165,15 @@ class quantizer{
        return(ptProjected);
      };
      
-   void fillDomeGrid2(double az, double zen, int plotn=0){
+   void fillDomeGrid2(double az, double zen, double dist, int plotn=0){
      int a= (int)(floor(az));
      if(a== nAzimuths) a--;
      // NB zenith is from 0 to 90 ( asin of positive values between 0 and 1) so we scale to nZeniths... e.g. if 180 nZeniths, zenith*2
      int z= (int)(floor(zen*((double)nZeniths/90.0)));
      if(z==nZeniths) z--;
      if ( this->domes[plotn][z][a] < (float)(INT32_MAX - 1)) {
-       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0;
+       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0/pow(dist,weight);
+       // else  this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0;
      } 
      
      if(maxvalue < this->domes[plotn][z][a]) maxvalue = this->domes[plotn][z][a];
@@ -167,15 +182,25 @@ class quantizer{
        arrIdx idx;
        idx = polar2plane( az, zen, this->nZeniths );
        int fidx = nZeniths*idx.row+idx.col;
-       if(this->weight) images[plotn][fidx]=images[plotn][fidx]+1.0*;
+ 
+       
+       if(this->weight && dist>1.0) images[plotn][fidx]=images[plotn][fidx]+1.0/pow(dist,0.5);
        else images[plotn][fidx]=images[plotn][fidx]+1.0;
+       
+       // if(this->weight && dist>1.0) {fprintf(stderr, "ww==%.3f dist=%.3f www %.4f wwww %.4f\n", 
+       //    this->weight, dist, images[plotn][fidx], 1.0/pow(dist,0.5) );
+       //   
+       //   fprintf(stderr,"<press ENTER>\n");
+       //   getc(stdin);
+       // }
+       
      }
      
    }; 
    
    void fillDomeGrid(polarCoordinate p, int plotn=0 ){
      if(p.zenith > this->zenCut ) return;
-     fillDomeGrid2( p.azimuth  , p.zenith ,   plotn );
+     fillDomeGrid2( p.azimuth, p.zenith, p.distance,    plotn );
    }; 
    
    bool finalizePlotDome(int plotn,   bool verbose=false) {   
@@ -197,26 +222,50 @@ class quantizer{
      return(true); 
    };
    
-   void finalizePlotDomes(bool verbose=false) { 
+   float* finalizePlotDomes(bool verbose=false) { 
      if(plotGapFraction==NULL){
-      return; 
-      }
+      return(NULL); 
+     }
       for(int i0=0; i0 <  nPlots; i0++ ){
         finalizePlotDome(i0,  verbose);
-        if(verbose) fprintf(stderr, "%.2f\t", plotGapFraction[i0]);
-      } 
+        if(verbose) fprintf(stderr, "%.2f\n", plotGapFraction[i0]);
+      }
+      return(plotGapFraction);
     };
    
  
  
- bool dome2asc(int plotn, int *image, bool verbose=false, bool tolog=false){
+ bool dome2asc(int plotn, float *image, bool verbose=false){
    
-   char outfilename[1024];
+   char outfilenamet[1024];
+   char outfilename[2048];
    // char outfilename2[1024];
    
-   if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
+   if(verbose) {
+     fprintf(stderr, "Doing image for plot %d\n", plotn);
+     if(this->toDb) fprintf(stderr, "Converting to dB ....\n"); 
+     if(this->toLog) fprintf(stderr, "Converting to log10 ....\n"); 
+     
+   }   
    
-   sprintf (outfilename,  "Plot_%03d.asc", (plotn+1));
+   // char ext[5] = ".asc";
+   
+   if(this->toDb){
+    sprintf (outfilenamet,  "Plot_%03d_dB", (plotn+1));
+   } 
+   else if(this->toLog){
+     sprintf (outfilenamet,  "Plot_%03d_log10", (plotn+1));
+   }
+   else {
+     sprintf (outfilenamet,  "Plot_%03d", (plotn+1));
+   }
+   
+   if(this->weight!=0.0){
+     sprintf(outfilename, "%s_w%.2f.asc", outfilenamet, this->weight);
+   }  else {
+     sprintf(outfilename, "%s.asc", outfilenamet);
+   }
+     
    // sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
    
    FILE *out= fopen(outfilename, "w");
@@ -234,18 +283,21 @@ class quantizer{
    {  
      // memcpy(buf,  &image[nZeniths*row], linebytes);  
      for (int col = 0; col < nZeniths; col++){
-       int v=((int)(image[nZeniths*row+col]));
-       
+       float v=((float)(image[nZeniths*row+col]));
+       if(v < .0f){
+         fprintf(out, "-1.0 "   ) ;
+         continue;
+       }
        if(this->toLog){
-         fprintf(out, "%.6f " , log10((v+1)) ) ;
+         fprintf(out, "%.6f " , log10((v+1.0)) ) ;
          continue;
         }
        
        if(this->toDb){
-         fprintf(out, "%.6f " ,  -10.0*log10((v+1) / maxvalue) ) ;
+         fprintf(out, "%.6f " ,  -10.0*log10((v+1) / (maxvalue+1)) ) ;
          continue;
        }
-      fprintf(out, "%d " , v) ; 
+      fprintf(out, "%.4f " , image[nZeniths*row+col]) ; 
      }
      fprintf(out, "\n"   ) ; 
     }

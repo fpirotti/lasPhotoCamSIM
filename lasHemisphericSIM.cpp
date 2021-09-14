@@ -45,12 +45,15 @@ int main(int argc, char *argv[])
   
   LASreadOpener lasreadopener;
   FILE*  fpLocations;
+  int maxlines=100;
   // FILE*  fpOutput;
   char file_name_location[256];
   float zCam=1.3;
   float zenCut=89.0;
   bool createRasters=false;
   bool toLog=false;
+  bool toDb=false;
+  float weight=0.0;
   point plotPositions[100];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
@@ -94,9 +97,23 @@ int main(int argc, char *argv[])
     {
       toLog=true;
     }
+    else if (strcmp(argv[i],"-db") == 0 )
+    {
+      toDb=true;
+    }
+    else if (strcmp(argv[i],"-weight") == 0 )
+    {
+      weight=atof(argv[i]);
+      if(weight==0.0) {
+        fprintf(stderr, "ERROR:  argument -weight '%s'"
+                  " was converted to 0.0 which is not possible" 
+                  " - please check \n", 
+                argv[i]);  
+        byebye(true, argc==1);
+      } 
+    }
     else if (strcmp(argv[i],"-zenCut") == 0)
     { 
-      
       i++;
       zenCut=atof(argv[i]);
       if(zenCut==0.0) {
@@ -139,6 +156,9 @@ int main(int argc, char *argv[])
   
   // fail if output file does not open
   
+  
+  char  *fsep;
+  
   if (fpLocations == 0)
   {
     fprintf(stderr, "ERROR: could not open '%s' for read\n", file_name_location); 
@@ -147,7 +167,7 @@ int main(int argc, char *argv[])
   } else {
     char line[2048];
     char *tmptokens[1024];
-    char  *token, *str, *tofree, *fsep;
+    char  *token, *str, *tofree ;
     
     fgets(line, 1024, fpLocations);
  
@@ -240,7 +260,7 @@ int main(int argc, char *argv[])
       }
       free(tofree);
         
-      if(nPositions>99){
+      if(nPositions>(maxlines-1)){
         fprintf(stderr, "ERROR: More than 100 rows with locations, please split your table with plot location coordinates in less than 100 plots per file.\n"); 
         byebye(true, argc==1); 
       }
@@ -252,14 +272,18 @@ int main(int argc, char *argv[])
   }
   
   if(verbose) fprintf(stderr, "Finished reading '%s'  \n", file_name_location); 
+  
+  fclose(fpLocations);
+  
   if (!lasreadopener.active())
   {
     fprintf(stderr,"ERROR: no input specified\n");
     usage(argc == 1);
+    byebye(true, argc==1);
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, zCam, zenCut); 
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, zCam, zenCut,  createRasters, toLog,  toDb, weight); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   
@@ -306,7 +330,7 @@ int main(int argc, char *argv[])
         lasreader->point.compute_coordinates();
         // convert to plot center reference
         original2plotCoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y); 
-        collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i, true);
+        collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i);
       
       } 
       
@@ -322,9 +346,27 @@ int main(int argc, char *argv[])
     lasreader->close();
     delete lasreader;
   }
+  fprintf(stderr, "\b\b\b100%%\n\nFINALIZING.....\n" );
+  float *gapFractions;
+  gapFractions = collector->finalizePlotDomes(true);  
   
-  collector->finalizePlotDomes(true, true);  
+  fpLocations = fopen(file_name_location, "r"); 
+  FILE *fpLocationsout = fopen(strcat(file_name_location,"_out"), "w"); 
+  char line[1024];   
+  char lineout[2048];
+  fgets(line, 1024, fpLocations);
+  line[strcspn(line, "\r\n")] = 0;
+  strcat(strcat(line, fsep), "GapFraction\n");
+  fputs(line,  fpLocationsout);
+  int c=0;
+  while (fgets(line, 1024, fpLocations))
+  {   
+    line[strcspn(line, "\r\n")] = 0;
+    sprintf(lineout, "%s%s%f\n", line, fsep, gapFractions[c]); 
+    fputs(lineout,  fpLocationsout);
+    c++;
+  }
   fclose(fpLocations);
-   
+  fclose(fpLocationsout);
   return 0;
 }
