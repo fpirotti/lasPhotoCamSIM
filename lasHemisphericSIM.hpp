@@ -66,20 +66,21 @@ class quantizer{
     int **images; 
     int mult=1;
     float zCam=1.3;
-    float zenithCut=89.0;
+    float zenCut=89.0;
     point *plotCenters;
     float *plotGapFraction; 
     
-    quantizer(int az, int ze, int plots, point *plotPositions, int mult=1) { 
+    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, int mult=1) { 
       this->mult = mult;
       this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
       this->nZeniths=ze;
       nPlots=plots;
-      plotCenters = plotPositions;
+      this->zCam=zCam1;
+      this->zenCut=zenCut1;
+      plotCenters = plotPositions; 
       
-      
-      fprintf(stderr, "Plot 1 %f %f \n", plotCenters[0].x, plotCenters[0].y);
+      fprintf(stderr, "Plot 1 values %.5f %.5f | zCam=%.2f  zenCut=%.2f\n", plotCenters[0].x, plotCenters[0].y, this->zCam, this->zenCut);
       
       this->domes = (int***)malloc(sizeof( *domes)  * plots);
       this->images = (int**)malloc(sizeof( *images) * plots);  
@@ -154,6 +155,7 @@ class quantizer{
    }; 
    
    void fillDomeGrid(polarCoordinate p, int plotn=0, bool createImage=false){
+     if(p.zenith > this->zenCut ) return;
      fillDomeGrid2( p.azimuth  , p.zenith ,   plotn, createImage );
    }; 
    
@@ -212,10 +214,11 @@ class quantizer{
              "nrows         %d \n"
              "xllcorner     %f\n"
              "yllcorner     %f\n"
-             "cellsize      1.0 \n"
+             "cellsize      %f \n"
              "NODATA_value  -1\n", nZeniths, nZeniths, 
              (plotCenters[plotn].x - (float)nZeniths/2.0), 
-             (plotCenters[plotn].y - (float)nZeniths/2.0) );
+             (plotCenters[plotn].y - (float)nZeniths/2.0),
+             (180.0/(float)nZeniths) );
    
    for (int row = 0; row < nZeniths; row++)
    {  
@@ -223,6 +226,7 @@ class quantizer{
      for (int col = 0; col < nZeniths; col++){
        fprintf(out, "%d " , (int)(image[nZeniths*row+col]) ) ; 
       }
+     fprintf(out, "\n"   ) ; 
     }
  
    if(ferror (out)) fprintf(stderr, "ERROR: File %s write error \n", outfilename); 

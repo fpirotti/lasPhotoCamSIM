@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, 2); 
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, plotPositions, zCam, zenCut); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   
@@ -279,7 +279,14 @@ int main(int argc, char *argv[])
      
     while (lasreader->read_point())
     {   
-      if(lasreader->point.get_z() < 1){
+      
+      if ( progress && ((lasreader->p_count % progress) == 0))
+      {
+        if(q==1000) fprintf(stderr, "\b\b\b\b\b\b\b\b\b\b%03d / 1000",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*1000.0)) ;
+        else  fprintf(stderr, "\b\b\b%02d%%",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*q)) ;
+      }
+      
+      if(lasreader->point.get_z() < zCam ){
         continue;  
       }
       
@@ -293,11 +300,7 @@ int main(int argc, char *argv[])
       
       } 
       
-      if ( progress && ((lasreader->p_count % progress) == 0))
-      {
-        if(q==1000) fprintf(stderr, "\b\b\b\b\b\b\b\b\b\b%03d / 1000",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*1000.0)) ;
-        else  fprintf(stderr, "\b\b\b%02d%%",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*q)) ;
-      }
+
     } 
      
     #ifdef _WIN32
