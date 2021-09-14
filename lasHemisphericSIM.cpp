@@ -115,14 +115,15 @@ int main(int argc, char *argv[])
     byebye(true, argc==1);
     
   } else {
-    char line[1024];
+    char line[2048];
     char *tmptokens[1024];
     fprintf(stderr, "reading '%s'  \n", file_name_location); 
     while (fgets(line, 1024, fpLocations))
     { 
-      char *token, *str, *tofree;
+      char *token, *str, *tofree, *fsep;
       line[strcspn(line, "\r\n")] = 0;
       tofree = str = strdup((char*)(&line));  // We own str's memory now. 
+      if(strlen(strsep(&str, "\t"))!=strlen(str) ) fsep = strdup("\t");
       int tok=0;
       while ((token = strsep(&str, "\t"))) {
         (tmptokens[tok])=strdup(token);  
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
   }
   
   
-  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions); 
+  quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS, nPositions, 2); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   

@@ -64,15 +64,16 @@ class quantizer{
     int nPlots;
     int ***domes; 
     int **images; 
+    int mult=1;
     float *plotGapFraction; 
     
-    quantizer(int az, int ze, int plots) { 
-      
+    quantizer(int az, int ze, int plots, int mult=1) { 
+      this->mult = mult;
       this->plotGapFraction = new float[plots];
       this->nAzimuths=az;
       this->nZeniths=ze;
       nPlots=plots;
-      this->domes = (int***)malloc(sizeof( *domes) * plots);
+      this->domes = (int***)malloc(sizeof( *domes)  * plots);
       this->images = (int**)malloc(sizeof( *images) * plots);  
       // this->images[i] = (int*)malloc(sizeof(*this->images[i]) * nZeniths); 
       if (this->domes  )
@@ -82,9 +83,9 @@ class quantizer{
         {
           this->plotGapFraction[i]=0.0;
           this->domes[i] = (int**)malloc(sizeof(*this->domes[i])  * nZeniths);  
-          this->images[i] = (int*)malloc(sizeof( *images) * nZeniths); 
-          this->images[i] =  new int[(nZeniths* nZeniths)];  
-          memset( this->images[i], 0, (nZeniths* nZeniths)*sizeof(int) );
+          // this->images[i] = (int*)malloc(sizeof( *images) * nZeniths); 
+          this->images[i] =  new int[(nZeniths*nZeniths*mult)];  
+          memset( this->images[i], 0, (nZeniths* nZeniths*mult)*sizeof(int) );
           if (this->domes[i] )
           {
             int j;
@@ -115,6 +116,7 @@ class quantizer{
        
        ptProjected.row = (int)(floor(( (sin(zen1)*cos(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
        ptProjected.col = (int)(floor(( (sin(zen1)*sin(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
+       
        if(ptProjected.row==gridWH) ptProjected.row--;
        if(ptProjected.col==gridWH) ptProjected.col--;
        
@@ -188,19 +190,19 @@ class quantizer{
  
    
    
-   bool dome2tiff(int plotn, int *image, bool verbose=false){
-     
-     
+   bool dome2tiff(int plotn, int *image, bool verbose=false, bool tolog=false){
+      
        char outfilename[1024];
        char outfilename2[1024];
         
-        
-        if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
-       sprintf (outfilename, "Plot_%03d.tif", (plotn+1));
+       if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
+       
+       sprintf (outfilename,  "Plot_%03d.tif", (plotn+1));
        sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
+       
        TIFF *out= TIFFOpen(outfilename, "wb");
 
-       TIFFSetField (out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
+       TIFFSetField(out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
        TIFFSetField(out, TIFFTAG_IMAGELENGTH, nZeniths);    // set the height of the image
        TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
        TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 32);    // set the size of the channels
@@ -209,13 +211,15 @@ class quantizer{
        TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
        TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
        
-       tmsize_t linebytes = sizeof(int) * nZeniths;     
-       int *buf = NULL;        // buffer used to store the row of pixel information for writing to file
+       tsize_t linebytes = sizeof(int) * nZeniths;     
+       int *buf = NULL;   float *buff=NULL;     // buffer used to store the row of pixel information for writing to file
        //    Allocating memory to store the pixels of current row
        if (TIFFScanlineSize(out)==linebytes){
          buf =(int *)_TIFFmalloc(linebytes);
+         buff =(float *)_TIFFmalloc(linebytes);
        } else{
          buf = (int *)_TIFFmalloc(TIFFScanlineSize(out));  
+         buff =(float *)_TIFFmalloc(TIFFScanlineSize(out));
          fprintf(stderr, "WARNING 2  %ld  %ld  %ld\n",  TIFFScanlineSize(out), TIFFScanlineSize(out), linebytes ) ;
        }
        // We set the strip size of the file to be size of one row of pixels
@@ -225,8 +229,12 @@ class quantizer{
        for (int row = 0; row < nZeniths; row++)
        { 
          // if(verbose) fprintf(stderr, "Do  %d\n",  image[row+10] ) ; 
-         memcpy(buf, &image[nZeniths*row], linebytes);    // check the index here, and figure out why not using h*linebytes
-         if (TIFFWriteScanline(out, buf, row, 0) < 0){
+         memcpy(buf,  &image[nZeniths*row], linebytes); 
+         memcpy(buff, &image[nZeniths*row], linebytes); 
+         
+         // for (int roww = 0; roww < nZeniths; roww++) buff[roww] = log((double)(buff[roww]));
+         
+         if (TIFFWriteScanline(out, buff, row, 0) < 0){
             if(verbose){ 
               fprintf(stderr, "WARNING  %d\n",  row ) ;
               fprintf(stderr,"<press ENTER>\n");
@@ -239,6 +247,8 @@ class quantizer{
        TIFFClose(out); 
        if (buf)
          _TIFFfree(buf);
+       if (buff)
+         _TIFFfree(buff);
        if(verbose) fprintf(stderr, "Done image for plot %d\n", plotn); 
      
      if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
@@ -251,11 +261,13 @@ class quantizer{
 void usage(bool wait=false)
 {
   fprintf(stderr,"usage:\n");
-  fprintf(stderr,"lasHemisphericSIM -i in.las -loc locations.csv -verbose -orast raster/output/directory \n"); 
+  fprintf(stderr,"lasHemisphericSIM -i in.las -loc locations.csv -verbose -zCam 1.3 -zenithCut 89  \n"); 
   fprintf(stderr,"lasHemisphericSIM -h\n");
-  fprintf(stderr,"-loc <text file path> is the path to a CSV file with X Y coordinates - other columns are ok and will be save in output. Comma, tab, pipe, and semi-column characters are accepted as column separators.\n");
-  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster representations.  \n");
-  fprintf(stderr,"For feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
+  fprintf(stderr,"-loc <file path> is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
+  fprintf(stderr,"-zCam <height value in meters> default=1.3m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
+  fprintf(stderr,"-zenithCut <Zenith angle in degrees> default=89° \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle \n\t(e.g. at 1km distance any point lower than 17.5 m height with respect to the camera ) .  \n");
+  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images (not yet georeference with this version).  \n");
+  fprintf(stderr,"Version 0.9: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
   if (wait)
   {
     fprintf(stderr,"<press ENTER>\n");
