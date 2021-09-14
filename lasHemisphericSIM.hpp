@@ -223,8 +223,8 @@ class quantizer{
          if(this->domes[plotn][z][az] > 0) hits++; 
        }
      }
-      
-     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*ZENITHS) * 100.0) ;
+     
+     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ZENITHS-zenCut)) * 100.0) ;
      if(this->cRaster){
        dome2asc(plotn,  images[plotn] , verbose);
      }
