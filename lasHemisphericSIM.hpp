@@ -67,7 +67,7 @@ class quantizer{
     float maxvalue=.0;
     int mult=1;
     float zCam=1.3;
-    float zenCut=89.0;
+    float zenCut=90.0;
     bool cRaster=false;
     bool toLog=false;
     bool toDb=false;
@@ -76,7 +76,8 @@ class quantizer{
     float *plotGapFraction; 
     char *basename;
     
-    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, float zenCut1=89.0, 
+    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, 
+              float zenCut1=90.0, 
               bool cRaster1=false, bool toLog1=false,  bool toDb1=false, 
               float weight1=1.0,  char *basename1=NULL, int mult=1) { 
       
@@ -151,6 +152,9 @@ class quantizer{
             {
               this->domes[i][j] =  new float[AZIMUTHS];  
               memset( this->domes[i][j], 0, (AZIMUTHS)*sizeof(float) );
+              for(int iii=0; iii < AZIMUTHS; iii++){
+                this->domes[i][j][iii]=0.0f;
+                }
             }
           }
         }
@@ -229,14 +233,14 @@ class quantizer{
      // int imagea[(nZeniths*nZeniths)];
      // memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
       
-     // USING ZENITS because it is fixed 180 360... 180 because zenit is 0.5°;
+     // USING ZENITS because it is fixed 180  because zenit is 0.5°;
      for(int z=0; z <  ZENITHS; z++ ){
        for(int az=0; az <  AZIMUTHS; az++ ){
          if(this->domes[plotn][z][az] > 0) hits++; 
        }
      }
      
-     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ZENITHS-zenCut)) * 100.0) ;
+     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ceil(zenCut*2))) * 100.0) ;
      if(this->cRaster){
        dome2asc(plotn,  images[plotn] , verbose);
      }

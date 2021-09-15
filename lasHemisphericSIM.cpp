@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   // FILE*  fpOutput;
   char file_name_location[256];
   float zCam=1.3;
-  float zenCut=89.0;
+  float zenCut=90.0;
   bool createRasters=false;
   bool toLog=false;
   bool toDb=false;
@@ -134,14 +134,19 @@ int main(int argc, char *argv[])
         fprintf(stderr, "WARNING:  argument -zenCut '%s' was converted to 0.0 zenith angle which means no field of view for camera (zenith angle 90° == horizon) - please check \n", 
                 argv[i]);  
       }
+      if(zenCut>90.0 || zenCut<0.0) {
+        fprintf(stderr, "ERROR:  argument -zenCut '%s' was not converted to values -- 0.0 < angle < 90.0 -- zenith angle which does not make sense (zenith angle 90 degrees == horizon, 0 degrees = upward) - please check \n", 
+                argv[i]);  
+        byebye(true, argc==1);
+      }
     } 
     else if (strcmp(argv[i],"-zCam") == 0)
     { 
       
       i++;
       zCam=atof(argv[i]);
-      if(zCam==0.0) {
-        fprintf(stderr, "WARNING:  argument '-zCam %s' was converted to 0.0 camera height  - please check if this is what you want.\n", 
+      if(zCam <= 0.0) {
+        fprintf(stderr, "WARNING:  argument '-zCam %s' was converted to 0.0 or lower camera height  - please check if this is what you want.\n", 
                 argv[i]);  
       }
     } 
@@ -186,18 +191,13 @@ int main(int argc, char *argv[])
     fgets(line, 1024, fpLocations);
  
     line[strcspn(line, "\r\n")] = 0;
-    tofree = str = strdup((char*)(&line));  // We own str's memory now. 
-    fsep = strdup("aaa"); 
-    token = strtok(str, fsep);  
- 
-    if(strlen(token)==strlen(line) ) {    
-      tofree = str = strdup((char*)(&line));    
-      fsep = strdup("\t");  
-      token = strtok(str, fsep); 
-      if(verbose) {
-        fprintf(stderr, "Testing separator '%s'\n", fsep); 
-      }
-    }  
+
+    tofree = str = strdup((char*)(&line));    
+    fsep = strdup("\t");  
+    token = strtok(str, fsep); 
+    if(verbose) {
+      fprintf(stderr, "Testing separator '%s'\n", fsep); 
+    } 
     
     if(strlen(token)==strlen(line) ) {  
       tofree = str = strdup((char*)(&line));   
