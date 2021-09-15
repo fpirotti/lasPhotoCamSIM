@@ -85,7 +85,11 @@ class quantizer{
       this->nAzimuths=az;
       this->nZeniths=ze;
       
-      this->basename=strdup(basename1);
+      if(basename1==NULL){
+        this->basename=strdup("lasHemisphericSIMoutputCSV");
+      } else {
+        this->basename=strdup(basename1); 
+        }
       
       this->cRaster=cRaster1;
       this->toLog=toLog1;
