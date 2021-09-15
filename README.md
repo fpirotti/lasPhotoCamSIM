@@ -1,7 +1,7 @@
 # lasHemisphericSIM
 
 
-Provides a simulated hemispherical photograph at user-defined positions in a point cloud. 
+Provides a simulated hemispherical photograph at user-defined positions in a point cloud, with gap-fraction calculation and projected grids with counts of points occluding sectors of spherical dome.. 
 
 <img src="./img1.jpg" />
 
@@ -113,6 +113,11 @@ Will read all points from forest.laz and camera locations at cameras.csv file in
     lasHemisphericSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -weight 2.0 -verbose
 
 Will read points in all LAZ files in folder /archivio/LAS/las_normalized/   and camera locations at cameras.csv file with verbose messages, and count points in falling in spherical sectors applying an inverse distance weight that is a power of 2. E.g. a point that is at distance X will count 1/X^2. **A 5 cm minimum distance is applyed** to avoid overflow of value if by chance a point is at 0.0m distance - this is reasonable as when camera is positioned, the operator will make sure that there not an obstruction right on the same position as the camera (e.g. right under a leaf).
+ 
+
+    lasHemisphericSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -orast -weight 2.0 -verbose
+
+Like above but will also create output grids in ESRI GRID ASCII format.
  
 
 ### Canopy and vegetation
