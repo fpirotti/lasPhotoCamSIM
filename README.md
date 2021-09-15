@@ -129,8 +129,9 @@ Using a **normalized** point cloud is more straight forward, if you want to focu
 
 This tool was created in the context of two projects, 
 
-CONAF ...
-VARCITIES ... 
+CONAF - Postulación Fondo de Investigación del Bosque Nativo Title: Indicadores fenológicos y estructurales de alteración de hábitat en bosques de araucaria. Part of the activities was to assess estimations using real hemispherical photography, canopy-scope and photogrammetric point clouds. See paper....
+
+VARCITIES - visionary solutions... In this context the light transmission in a garden is estimated to assess, with other variables, which areas are most suited for wellness of visitors. 
 
 ## Contacts   
 
