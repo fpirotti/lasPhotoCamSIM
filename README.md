@@ -31,16 +31,16 @@ To compile from source code clone this directory or download the CPP and HPP fil
 
 *convert*          
 
-  all: lasexample lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
+  _all: lasexample lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes_
 
 *to *
 
-  all: lasexample lasHemisphericSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes
+  _all: lasexample lasHemisphericSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes_
 
 *and right after add:*
 
-lasHemisphericSIM: lasHemisphericSIM.o
-      	${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
+_lasHemisphericSIM: lasHemisphericSIM.o_   
+      	_${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)_
 
 
 You should be able then to run successfully the command **"make lasHemisphericSIM"** in the directory and this creates the executable.
@@ -48,19 +48,19 @@ You should be able then to run successfully the command **"make lasHemisphericSI
 
 ### WINDOWS
 
-Use  the MingW compiler chain and follow the steps like in linux.
+Use  the MingW compiler chain and follow the steps above, like for linux platforms.
 
 
 
 ## Usage and description
 
-This tools basically estimates how much direct light arrives at a certain spot/plot. User provides a CSV file with a list of coordinates and the tool converts the point cloud coordinates to polar coordinates and figures how much obstruction they create, by testing a number of "line of sight" directions that would correspond to pixels of a photo at zenithal (upward to the sky) direction using  fish-eye lens.   
+This tools basically estimates how much light arrives at a certain spot/plot., or how much open skype (aka gap-fraction in forests), or complementary canopy cover ratio, is present at a certain spot. User provides a CSV file with a list of coordinates that correspond to camera positions, height of camera position,  and the tool reprojects the  points from the point cloud to spherical coordinates with respect to a hemispherical dome around the camera,  and figures how much obstruction they create, by testing 1° azimuth x 0.5° zenith sectors, rays that are traced between camera center and points.   
 
 ### PARAMETERS
 
 **-loc \<file path\>**: is the path to a CSV file with X Y coordinates of camera locations - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.
 
-Example of CSV file contents from a file names *cameras.csv*:   
+Example: **-loc cameras.csv** cameras.csv with the following contents:   
   
     X;Y
     726836.4;5140271.4
@@ -71,7 +71,7 @@ Example of CSV file contents from a file names *cameras.csv*:
     726715.63;5140525.64
 
 
-Example of **ouput** CSV file contents; the output file will be names *cameras.csv.out* :
+After running, the ouput will create a file in the same directory **cameras.csv.out** with the following contents:
   
     X;Y;GapFraction
     726836.4;5140271.4;23.5
@@ -82,7 +82,7 @@ Example of **ouput** CSV file contents; the output file will be names *cameras.c
     726715.63;5140525.64;33.6
 
 
-**-orast**: exports 180x180 pixel rasters in ESRI GRID ASCII format. Pixels represent the point counts.   
+**-orast**: exports reprojected shperical coordinates to a planar 180x180 (default) ESRI GRID ASCII format. Pixels represent the point counts. For larger grids see the following argument **-mult**.  The cell values are the counts of points  
 
 **-mult \<multiplier value\>**: *default=1* the output raster is 180x180 pixels, if you add "-mult 2" it will become 360x360 .... NB this does not influence the gap fraction calculation, which is fixed on a hemispheric dome divided in sectors 1° in azimunt and 0.5° in zenith angles. 
 
@@ -100,7 +100,7 @@ Cells with no pixels (value=0) are thus given log(1) and have value 0 also after
 ### OUTPUT
 
   1. a CSV file with the file name  appended with  *.out* and file contents of original camera locations file with appended column with gap fraction values.
-  2. If *-orast*  is set, one ESRI GRID ASCII text file that can be loaded in a gis software. One file per plot. Center of grid is geolocated at camera position, but of course the size is not scaled.
+  2. If *-orast*  is set, one ESRI GRID ASCII (.asc) text file that can be loaded in a gis software. One grid file per plot, named <plot. Center of grid is geolocated at camera position, but of course the size is not scaled.
  
 **Examples** 
 
@@ -112,9 +112,8 @@ Will read all points from forest.laz and camera locations at cameras.csv file in
 
     lasHemisphericSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -weight 2.0 -verbose
 
-
-Will read points in all LAZ files in folder /archivio/LAS/las_normalized/   and camera locations at cameras.csv file with verbose messages.
-
+Will read points in all LAZ files in folder /archivio/LAS/las_normalized/   and camera locations at cameras.csv file with verbose messages, and count points in falling in spherical sectors applying an inverse distance weight that is a power of 2. E.g. a point that is at distance X will count 1/X^2. **A 5 cm minimum distance is applyed** to avoid overflow of value if by chance a point is at 0.0m distance - this is reasonable as when camera is positioned, the operator will make sure that there not an obstruction right on the same position as the camera (e.g. right under a leaf).
+ 
 
 ### Canopy and vegetation
    

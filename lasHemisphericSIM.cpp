@@ -194,6 +194,9 @@ int main(int argc, char *argv[])
       tofree = str = strdup((char*)(&line));    
       fsep = strdup("\t");  
       token = strtok(str, fsep); 
+      if(verbose) {
+        fprintf(stderr, "Testing separator '%s'\n", fsep); 
+      }
     }  
     
     if(strlen(token)==strlen(line) ) {  

@@ -190,7 +190,7 @@ class quantizer{
      int z= (int)(floor(zen*2));
      if(z==nZeniths) z--;
      if ( this->domes[plotn][z][a] < (float)(INT32_MAX - 1)) {
-       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0/pow(dist,weight);
+       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0/pow((dist+0.05),weight);
        // else  this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0;
      } 
      
@@ -201,7 +201,7 @@ class quantizer{
        idx = polar2plane( az, zen, this->nZeniths );
        int fidx = nZeniths*idx.row+idx.col;
        
-       if(this->weight && dist>1.0) images[plotn][fidx]=images[plotn][fidx]+1.0/pow(dist,0.5);
+       if(this->weight && dist>1.0) images[plotn][fidx]=images[plotn][fidx]+1.0/pow((dist+0.05),weight);
        else images[plotn][fidx]=images[plotn][fidx]+1.0;
        
        // if(this->weight && dist>1.0) {fprintf(stderr, "ww==%.3f dist=%.3f www %.4f wwww %.4f\n", 
@@ -270,13 +270,13 @@ class quantizer{
    // char ext[5] = ".asc";
    
    if(this->toDb){
-    sprintf (outfilenamet,  "%s.%03d_dB", basename,  (plotn+1));
+    sprintf (outfilenamet,  "%s.plot%03d_dB", basename,  (plotn+1));
    } 
    else if(this->toLog){
-     sprintf (outfilenamet,  "%s.%03d_log10", basename, (plotn+1));
+     sprintf (outfilenamet,  "%s.plot%03d_log10", basename, (plotn+1));
    }
    else {
-     sprintf (outfilenamet,  "%s.%03d", basename, (plotn+1));
+     sprintf (outfilenamet,  "%s.plot%03d", basename, (plotn+1));
    }
    
    if(this->weight!=0.0){
@@ -325,7 +325,7 @@ class quantizer{
    if(ferror (out)) fprintf(stderr, "ERROR: File %s write error \n", outfilename); 
    
    fclose(out);  
-   if(verbose) fprintf(stderr, "Done image for plot %d\n", plotn); 
+   if(verbose) fprintf(stderr, "Written file %s with  image for plot %d\n", outfilename, plotn);  
     
    return(true);
    
