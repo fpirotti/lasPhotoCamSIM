@@ -1,4 +1,4 @@
-# lasHemisphericSIM
+# lasPhotoCamSIM
 
 
 Provides a simulated hemispherical photograph at user-defined positions in a point cloud, with gap-fraction calculation and projected grids with counts of points occluding sectors of spherical dome.. 
@@ -9,7 +9,7 @@ Provides a simulated hemispherical photograph at user-defined positions in a poi
 
 ### Install
 
-Download the compiled executable lasHemisphericSIM (linux) or lasHemisphericSIM.exe (Windows 64-bit compiled with MingW) and enjoy.
+Download the compiled executable lasPhotoCamSIM (linux) or lasPhotoCamSIM.exe (Windows 64-bit compiled with MingW) and enjoy.
 
 
 ### Compile
@@ -24,8 +24,8 @@ To compile from source code clone this directory or download the CPP and HPP fil
     - cd build
     - cmake ../ (install cmake if you don't have it) 
     - make
- - Compile lasHemisphericSIM :
-    - go to the "example" directory in LASlib (<LAStools install dir>/LASlib/example) and copy/move the lasHemisphericSIM.cpp and lasHemisphericSIM.hpp files there.
+ - Compile lasPhotoCamSIM :
+    - go to the "example" directory in LASlib (<LAStools install dir>/LASlib/example) and copy/move the lasPhotoCamSIM.cpp and lasPhotoCamSIM.hpp files there.
     - Open "Makefile" file and modify contents: 
 
 
@@ -35,15 +35,15 @@ To compile from source code clone this directory or download the CPP and HPP fil
 
 *to *
 
-  _all: lasexample lasHemisphericSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes_
+  _all: lasexample lasPhotoCamSIM lasexample_write_only lasexample_add_rgb lasexample_simple_classification lasexample_write_only_full_waveform lasexample_write_only_with_extra_bytes_
 
 *and right after add:*
 
-_lasHemisphericSIM: lasHemisphericSIM.o_   
-      	_${LINKER} ${BITS} ${COPTS} lasHemisphericSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)_
+_lasPhotoCamSIM: lasPhotoCamSIM.o_   
+      	_${LINKER} ${BITS} ${COPTS} lasPhotoCamSIM.o -llas   -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)_
 
 
-You should be able then to run successfully the command **"make lasHemisphericSIM"** in the directory and this creates the executable.
+You should be able then to run successfully the command **"make lasPhotoCamSIM"** in the directory and this creates the executable.
 
 
 ### WINDOWS
@@ -105,17 +105,17 @@ Cells with no pixels (value=0) are thus given log(1) and have value 0 also after
 **Examples** 
 
 
-    lasHemisphericSIM -i /archivio/LAS/las_normalized/forest.laz -loc cameras.csv -verbose
+    lasPhotoCamSIM -i /archivio/LAS/las_normalized/forest.laz -loc cameras.csv -verbose
     
 Will read all points from forest.laz and camera locations at cameras.csv file in current directory, providing verbose messages.
 
 
-    lasHemisphericSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -weight 2.0 -verbose
+    lasPhotoCamSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -weight 2.0 -verbose
 
 Will read points in all LAZ files in folder /archivio/LAS/las_normalized/   and camera locations at cameras.csv file with verbose messages, and count points in falling in spherical sectors applying an inverse distance weight that is a power of 2. E.g. a point that is at distance X will count 1/X^2. **A 5 cm minimum distance is applyed** to avoid overflow of value if by chance a point is at 0.0m distance - this is reasonable as when camera is positioned, the operator will make sure that there not an obstruction right on the same position as the camera (e.g. right under a leaf).
  
 
-    lasHemisphericSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -orast -weight 2.0 -verbose
+    lasPhotoCamSIM -i /archivio/LAS/las_normalized/*.laz -loc camera.csv -log -orast -weight 2.0 -verbose
 
 Like above but will also create output grids in ESRI GRID ASCII format.
  
