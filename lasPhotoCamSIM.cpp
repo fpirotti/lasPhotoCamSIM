@@ -1,7 +1,7 @@
 /*
  ===============================================================================
  
- FILE:  lasHemisphericSIM.cpp
+ FILE:  lasPhotoCamSIM.cpp
  
  CONTENTS:
  
@@ -31,7 +31,7 @@
  ===============================================================================
  */
 
-#include "lasHemisphericSIM.hpp"
+#include "lasPhotoCamSIM.hpp"
 
 
 
