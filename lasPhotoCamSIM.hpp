@@ -26,9 +26,10 @@
  
 struct point
 {
-  double x;
-  double y;
-  double z;
+  double x=.0;
+  double y=.0;
+  double z=.0;
+  bool isImage = false;
 };
 
 struct arrIdx
@@ -50,6 +51,9 @@ struct polarCoordinate
   double azimuth=0;
   double zenith=0;
   double distance=0;
+  double distance2d=0;
+  point planar;
+  point image;
 };
 // struct quantizer
 // { 
@@ -448,17 +452,91 @@ void printPoint(LASpoint *point){
           point->coordinates[2]);
 }
 
-void original2plotCoords(LASpoint *pt, double x, double y, double z) {  
+void original2cameracoords(LASpoint *pt, double x, double y, double z) {  
   pt->coordinates[0] = pt->coordinates[0]-x;
   pt->coordinates[1] = pt->coordinates[1]-y;
   pt->coordinates[2] = pt->coordinates[2]-z;
 }
-void plotCoords2original(LASpoint *pt, double x, double y, double z) {  
+
+void cameraCoords2original(LASpoint *pt, double x, double y, double z) {  
   pt->coordinates[0] = pt->coordinates[0]+x;
   pt->coordinates[1] = pt->coordinates[1]+y;
   pt->coordinates[2] = pt->coordinates[2]+z;
 }
 
+
+void camera2imageStr(polarCoordinate pt, double c=1.0 ) {  
+  double x, y;
+  
+  if(pt.planar.x) {x=.0;}
+  else { x = c * tan( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
+                         
+  if(pt.planar.y){ y=.0;}
+  else { y = c  * tan( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
+  
+  pt.planar.x = x;  
+  pt.planar.y = y;  
+  pt.planar.isImage=true;   
+}
+
+void camera2imageEqd(polarCoordinate pt, double c=1.0) {  
+  double x, y;
+  
+  if(pt.planar.x) {x=.0;}
+  else { x = c * atan2(pt.distance, pt.planar.z)  / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
+  
+  if(pt.planar.y){ y=.0;}
+  else { y = c * atan2(pt.distance, pt.planar.z)  / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
+  
+  pt.planar.x = x;  
+  pt.planar.y = y;  
+  pt.planar.isImage=true;
+}
+
+void camera2imageEqa(polarCoordinate pt, double c=1.0) {  
+  double x, y;
+  
+  if(pt.planar.x) {x=.0;}
+  else { x = c *  sin( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
+  
+  if(pt.planar.y){ y=.0;}
+  else { y = c * sin( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
+  
+  pt.planar.x = x;  
+  pt.planar.y = y;  
+  pt.planar.isImage=true;    
+}
+
+void camera2imageOrt(polarCoordinate pt, double c=1.0) {  
+  double x, y;
+  
+  if(pt.planar.x) {x=.0;}
+  else { x = c *  sin(  atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
+  
+  if(pt.planar.y){ y=.0;}
+  else { y = c  * sin(   atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
+  
+  pt.planar.x = x;  
+  pt.planar.y = y;  
+  pt.planar.isImage=true;   
+}
+
+// NB requires that point coordinates are relative to camera space (original2cameracoords) and that polar coordinates are provided
+void camera2image(polarCoordinate pt, int projection, double c=1.0) {  
+  
+  if(projection==1) camera2imageStr(pt,c);
+  else if(projection==2) camera2imageEqa(pt,c);
+  else if(projection==3) camera2imageEqd(pt,c);
+  else if(projection==4) camera2imageOrt(pt,c);
+  else {
+    
+    }
+  // atan2()
+  
+  // pt->coordinates[0];
+  // pt->coordinates[1];
+  // pt->coordinates[2];
+}
  
 double distance3d(LASpoint *pt, double x=0, double y=0, double z=0, bool verbose=false) {  
   double dist = sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y)  + (pt->coordinates[2]-z)*(pt->coordinates[2]-z) );
@@ -470,10 +548,10 @@ double distance3d(LASpoint *pt, double x=0, double y=0, double z=0, bool verbose
 }
 
 double distance2d(LASpoint *pt, double x=0, double y=0, bool verbose=false) {  
-  if(verbose) fprintf(stderr, "distance  %.2f %.2f || %.2f  %.2f  distance==%.2f ;\n",
-     pt->coordinates[0],pt->coordinates[1], x, y,
-     sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y) )  );
-  
+  // if(verbose) fprintf(stderr, "distance  %.2f %.2f || %.2f  %.2f  distance==%.2f ;\n",
+  //    pt->coordinates[0],pt->coordinates[1], x, y,
+  //    sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y) )  );
+  // 
   return( sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y) ) );
 }
 
@@ -501,15 +579,20 @@ void crt2eqd(LASpoint *pt) {
 // crtPlot coordinates referred to plot center (see original2plotCoords function)
 
 polarCoordinate crtPlot2polar(LASpoint *pt) {  
+  
   polarCoordinate pol;
-  double dist = distance3d(pt);
-  pol.distance = dist;
+  pol.distance = distance3d(pt);
+  pol.distance2d = distance2d(pt);
+  pol.planar.x = pt->coordinates[0];
+  pol.planar.y = pt->coordinates[1];
+  pol.planar.z = pt->coordinates[2];
+  
   if( (pt->coordinates[0]==pt->coordinates[1]) && (pt->coordinates[1]==0.0) ){
     pol.azimuth = 0;
     pol.zenith = 0;
   } else{ 
     pol.azimuth = rad2deg( atan2(pt->coordinates[1],pt->coordinates[0]) )+180.0;
-    pol.zenith =  rad2deg( acos(pt->coordinates[2] / dist) );
+    pol.zenith =  rad2deg( acos(pt->coordinates[2] / pol.distance) );
   }
   return(pol);
 }

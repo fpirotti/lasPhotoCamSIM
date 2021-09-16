@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
   float zCam=1.3;
   float zenCut=90.0;
   float maxdist=1000.0;  // maximum distance to consider when counting points... 1 km
-  bool createRasters=false;
+  int createRasters=180;
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
@@ -107,18 +107,24 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i],"-proj") == 0 )
     {
       i++;
-      if(strcmp(argv[i],"stereo")==0){
-        
-      } else if(strcmp(argv[i],"stereo")==0){
-        
-      }
-      if(mult==0.0) {
+      if(strcmp(argv[i],"str")==0){
+        proj=1;
+      } else if(strcmp(argv[i],"eqa")==0){ 
+        proj=2;
+      } else if(strcmp(argv[i],"eqd")==0){
+        proj=3; 
+      } else if(strcmp(argv[i],"ort")==0){
+        proj=4; 
+      } else {
         fprintf(stderr, "ERROR:  argument -proj '%s'"
-                  " was converted to 0 which is not possible" 
+                  " not correct. Possible values are: eqa, eqd, str, ort respectively"
+                  " for equisolid-angl, equidistant, stereographic and orthographic projections"
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
-      } 
+        
+        }
+  
     }
     else if (strcmp(argv[i],"-maxdist") == 0 )
     {
@@ -389,11 +395,12 @@ int main(int argc, char *argv[])
         lasreader->point.compute_coordinates();
         // convert to plot center reference, if distance above maxdist parameter, then continue....
         
-        original2plotCoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z)
+        original2cameracoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z);
 
         polCrt = crtPlot2polar(&lasreader->point);
         if( polCrt.distance > maxdist ) continue; 
         
+        camera2image(polCrt, proj);
         collector->fillDomeGrid( polCrt, i);
       
       } 
