@@ -50,11 +50,13 @@ int main(int argc, char *argv[])
   char file_name_location[256];
   float zCam=1.3;
   float zenCut=90.0;
+  float maxdist=1000.0;  // maximum distance to consider when counting points... 1 km
   bool createRasters=false;
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
   int mult=1;
+  int proj=0;
   point plotPositions[100];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
@@ -101,6 +103,34 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i],"-db") == 0 )
     {
       toDb=true;
+    }
+    else if (strcmp(argv[i],"-proj") == 0 )
+    {
+      i++;
+      if(strcmp(argv[i],"stereo")==0){
+        
+      } else if(strcmp(argv[i],"stereo")==0){
+        
+      }
+      if(mult==0.0) {
+        fprintf(stderr, "ERROR:  argument -proj '%s'"
+                  " was converted to 0 which is not possible" 
+                  " - please check \n", 
+                  argv[i]);  
+        byebye(true, argc==1);
+      } 
+    }
+    else if (strcmp(argv[i],"-maxdist") == 0 )
+    {
+      i++;
+      maxdist=atof(argv[i]);
+      if(mult==0.0) {
+        fprintf(stderr, "ERROR:  argument -maxdist '%s'"
+                  " was converted to 0 which is not possible" 
+                  " - please check \n", 
+                  argv[i]);  
+        byebye(true, argc==1);
+      } 
     }
     else if (strcmp(argv[i],"-mult") == 0 )
     {

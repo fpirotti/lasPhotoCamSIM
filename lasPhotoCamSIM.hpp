@@ -275,7 +275,6 @@ class quantizer{
      if(this->toLog) fprintf(stderr, "Converting to log10 ....\n");  
    }   
    
-   // char ext[5] = ".asc";
    
    if(this->toDb){
     sprintf (outfilenamet,  "%s.plot%03d_dB", basename,  (plotn+1));
@@ -416,7 +415,8 @@ void usage(bool wait=false)
   fprintf(stderr,"usage:\n");
   fprintf(stderr,"lasPhotoCamSIM -i in.las -loc plotPositions.csv -verbose  -zCam 1.3 -zenithCut 89 -orast -log \n"); 
   fprintf(stderr,"lasPhotoCamSIM -h\n");
-  fprintf(stderr,"-orast exports 180x180 pixel rasters in ESRI GRID ASCII format. Pixels represent the point counts. \n");
+  fprintf(stderr,"-orast <size of square in pizels> default=180 - exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
+  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 - will ignore any points that are further than this value from the center of the camera. \n");
   fprintf(stderr,"-log converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
   fprintf(stderr,"-loc <file path> is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
   fprintf(stderr,"-zCam <height value in meters> default=1.3m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
@@ -453,6 +453,13 @@ void original2plotCoords(LASpoint *pt, double x, double y) {
   pt->coordinates[1] = pt->coordinates[1]-y;
 }
 void plotCoords2original(LASpoint *pt, double x, double y) {  
+  pt->coordinates[0] = pt->coordinates[0]+x;
+  pt->coordinates[1] = pt->coordinates[1]+y;
+}
+
+
+void original2plotCoordsNorm(LASpoint *pt, double x, double y) {  
+
   pt->coordinates[0] = pt->coordinates[0]+x;
   pt->coordinates[1] = pt->coordinates[1]+y;
 }

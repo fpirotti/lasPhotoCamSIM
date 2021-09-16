@@ -1,9 +1,12 @@
 # lasPhotoCamSIM
 
 
-Provides a simulated hemispherical photograph at user-defined positions in a point cloud, with gap-fraction calculation and projected grids with counts of points occluding sectors of spherical dome.. 
+Provides a simulated photograph at user-defined positions in a point cloud, with  calculation of how much light arrives to the lens and grids projected with four mathematical hemispherical lens models: equiangular, equidistant, stereographic, and orthographic.
+
 
 <img src="./img1.jpg" />
+
+See paper XXXX
 
 ## Installation instruction
 
