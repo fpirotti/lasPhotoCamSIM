@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
       if(tok<3){
         fprintf(stderr, "ERROR: at least 3 columns required (X, Y and Z coordinates), with header line: your table seems to have only one or two."
                   "Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators!"
-                  "If you don't care about camera Z coordinate and want a fixed value, you can put '0' for the third column and fix the value using -zCam\n"); 
+                  "If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam\n"); 
         byebye(true, argc==1);
       } 
       plotPositions[nPositions].x =  atof( tmptokens[0] );  

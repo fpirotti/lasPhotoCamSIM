@@ -82,7 +82,7 @@ After running, the ouput will create a file in the same directory **cameras.csv.
     279963|5718737|0|36.8
     283261|5718290|0|12.4
 
-
+ 
 **-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided. The name of the output files will be: Plot_\<Number in 00X format\>\<-log or -db if trasformation was used\>\<-ort, -eqd -eqa -str depending on the projection chosen\>.asc 
 
 
