@@ -61,28 +61,26 @@ This tools basically estimates how much light arrives at a certain spot/plot., o
 
 ### PARAMETERS
 
-**-loc \<file path\>**: is the path to a CSV file with X Y coordinates of camera locations - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.
+**-loc \<file path\>**: is the path to a CSV file with X Y and Z coordinates of camera locations - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators. If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam
 
 Example: **-loc cameras.csv** cameras.csv with the following contents:   
   
-    X;Y
-    726836.4;5140271.4
-    726994.6;5140427.6
-    726861.51;5140416.72
-    726850.40;5140148.38
-    726717.3;5140225.1
-    726715.63;5140525.64
+    X|Y|Z
+    279890|5718602|0
+    279955|5718681|0
+    279880|5718759|0
+    279963|5718737|0
+    283261|5718290|0
 
 
 After running, the ouput will create a file in the same directory **cameras.csv.out** with the following contents:
   
-    X;Y;GapFraction
-    726836.4;5140271.4;23.5
-    726994.6;5140427.6;66.9
-    726861.51;5140416.72;11.6
-    726850.40;5140148.38;99.4
-    726717.3;5140225.1;56.7
-    726715.63;5140525.64;33.6
+    X|Y|Z|GapFraction
+    279890|5718602|0|32.4
+    279955|5718681|0|72.4
+    279880|5718759|0|12.45
+    279963|5718737|0|36.8
+    283261|5718290|0|12.4
 
 
 **-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided.  

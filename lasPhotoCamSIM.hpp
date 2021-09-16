@@ -110,7 +110,7 @@ class quantizer{
       fprintf(stderr, "\n==============================\n"
                 "Setup with plot center (1st plot) %.5f %.5f \n"
                 "nZenith=%d  "
-                "nAzimuths=%d  "
+                "nAzimuths=%d  " 
                 "zCam=%.2f  "
                 "zenCut=%.2f" 
                 "\n", plotCenters[0].x, plotCenters[0].y,
@@ -448,22 +448,18 @@ void printPoint(LASpoint *point){
           point->coordinates[2]);
 }
 
-void original2plotCoords(LASpoint *pt, double x, double y) {  
+void original2plotCoords(LASpoint *pt, double x, double y, double z) {  
   pt->coordinates[0] = pt->coordinates[0]-x;
   pt->coordinates[1] = pt->coordinates[1]-y;
+  pt->coordinates[2] = pt->coordinates[2]-z;
 }
-void plotCoords2original(LASpoint *pt, double x, double y) {  
+void plotCoords2original(LASpoint *pt, double x, double y, double z) {  
   pt->coordinates[0] = pt->coordinates[0]+x;
   pt->coordinates[1] = pt->coordinates[1]+y;
+  pt->coordinates[2] = pt->coordinates[2]+z;
 }
 
-
-void original2plotCoordsNorm(LASpoint *pt, double x, double y) {  
-
-  pt->coordinates[0] = pt->coordinates[0]+x;
-  pt->coordinates[1] = pt->coordinates[1]+y;
-}
-
+ 
 double distance3d(LASpoint *pt, double x=0, double y=0, double z=0, bool verbose=false) {  
   double dist = sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y)  + (pt->coordinates[2]-z)*(pt->coordinates[2]-z) );
   

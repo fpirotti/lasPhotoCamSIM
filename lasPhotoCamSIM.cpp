@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
   float weight=0.0;
   int mult=1;
   int proj=0;
-  point plotPositions[100];
+  point plotPositions[1001];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
   
@@ -296,19 +296,28 @@ int main(int argc, char *argv[])
         token = strtok(NULL, fsep);
       }
       
-      if(tok<2){
-        fprintf(stderr, "ERROR: at least 2 columns required (X and Y coordinates), without header line: your table seems to have only one. Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators. !\n"); 
+      if(tok<3){
+        fprintf(stderr, "ERROR: at least 3 columns required (X, Y and Z coordinates), with header line: your table seems to have only one or two."
+                  "Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators!"
+                  "If you don't care about camera Z coordinate and want a fixed value, you can put '0' for the third column and fix the value using -zCam\n"); 
         byebye(true, argc==1);
       } 
       plotPositions[nPositions].x =  atof( tmptokens[0] );  
       plotPositions[nPositions].y =  atof( tmptokens[1] );  
-      if(plotPositions[nPositions].x==.0 || plotPositions[nPositions].y==.0){
-        fprintf(stderr, "WARNING: read coordinate with 0.0 value... make sure it is correct \n"); 
+      plotPositions[nPositions].z =  atof( tmptokens[2] );  
+      if(plotPositions[nPositions].x==.0){
+        fprintf(stderr, "WARNING: read coordinate X with 0.0 value... make sure it is correct \n"); 
+      }
+      if(plotPositions[nPositions].y==.0){
+        fprintf(stderr, "WARNING: read coordinate Y with 0.0 value... make sure it is correct \n"); 
+      }
+      if(plotPositions[nPositions].z==.0){
+        fprintf(stderr, "WARNING: read coordinate Z with 0.0 value... make sure it is correct \n"); 
       }
       free(tofree);
         
       if(nPositions>(maxlines-1)){
-        fprintf(stderr, "ERROR: More than 100 rows with locations, please split your table with plot location coordinates in less than 100 plots per file.\n"); 
+        fprintf(stderr, "ERROR: More than 1000 rows with locations, please split your table with plot location coordinates in less than 1000 plots per file.\n"); 
         byebye(true, argc==1); 
       }
       
@@ -336,7 +345,7 @@ int main(int argc, char *argv[])
                                        file_name_location ); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
-  
+  polarCoordinate polCrt;
   while (lasreadopener.active()) {
     
     LASreader* lasreader = lasreadopener.open();
@@ -370,7 +379,7 @@ int main(int argc, char *argv[])
         else  fprintf(stderr, "\b\b\b%02d%%",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*q)) ;
       }
       
-      if(lasreader->point.get_z() < zCam ){
+      if(  lasreader->point.get_z() < zCam   ){
         continue;  
       }
       
@@ -378,9 +387,14 @@ int main(int argc, char *argv[])
         // grab coordinates 
          
         lasreader->point.compute_coordinates();
-        // convert to plot center reference
-        original2plotCoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y); 
-        collector->fillDomeGrid( crtPlot2polar(&lasreader->point), i);
+        // convert to plot center reference, if distance above maxdist parameter, then continue....
+        
+        original2plotCoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z)
+
+        polCrt = crtPlot2polar(&lasreader->point);
+        if( polCrt.distance > maxdist ) continue; 
+        
+        collector->fillDomeGrid( polCrt, i);
       
       } 
       
