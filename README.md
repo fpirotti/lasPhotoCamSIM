@@ -85,9 +85,10 @@ After running, the ouput will create a file in the same directory **cameras.csv.
     726715.63;5140525.64;33.6
 
 
-**-orast**: exports reprojected shperical coordinates to a planar 180x180 (default) ESRI GRID ASCII format. Pixels represent the point counts. For larger grids see the following argument **-mult**.  The cell values are the counts of points  
+**-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided.  
 
-**-mult \<multiplier value\>**: *default=1* the output raster is 180x180 pixels, if you add "-mult 2" it will become 360x360 .... NB this does not influence the gap fraction calculation, which is fixed on a hemispheric dome divided in sectors 1° in azimunt and 0.5° in zenith angles. 
+
+**-maxdist: \<distance in meters\>**: *default=1000.0* - any points falling outside this distance from the camera center will be ignored.   
 
 **-log10**: converts pixel values, which represent point counts, to log10 scale (-orast must be also present) - formula is log10(pixelvalue+1). 
 Cells with no pixels (value=0) are thus given log(1) and have value 0 also after transformation.  This can be helpful as high zenith angles will obviously intersect a very high number of poitnts. Log-transformation can scale to better visualize results. 
