@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
   float weight=0.0;
   int mult=1;
   int proj=0;
+  char *projchar=strdup("eqa");
   point plotPositions[1001];
   int nPositions=0;
   //LASwriteOpener //laswriteopener;
@@ -153,6 +154,7 @@ int main(int argc, char *argv[])
         byebye(true, argc==1);
         
         }
+      projchar = strdup(argv[i]);
   
     }
     else if (strcmp(argv[i],"-maxdist") == 0 )
@@ -379,7 +381,7 @@ int main(int argc, char *argv[])
   
   quantizer *collector = new quantizer( nPositions, plotPositions, 
                                        zenCut,  orast, toLog,  toDb, weight,
-                                       file_name_location ); 
+                                       file_name_location,  projchar ); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   polarCoordinate polCrt;
@@ -439,7 +441,7 @@ int main(int argc, char *argv[])
         
         // if(polCrt.planar.isImage) 
         // fprintf(stderr, "\n 2222.aaaa%f\n " , polCrt.planar.x );
-        collector->image2grid(i,  &polCrt, proj );
+        collector->image2grid(i,  &polCrt  );
         // fprintf(stderr, "\n 2222.aaaa%f\n " , polCrt.planar.x );
       
       } 
@@ -461,9 +463,10 @@ int main(int argc, char *argv[])
   float *gapFractions;
   
   gapFractions = collector->finalizePlotDomes(true);  
-  
+  char bbb[12048];
+  sprintf(bbb, "%s_%s_zenCut%d_sz%d.out", file_name_location, projchar, (int)zenCut, orast );
   fpLocations = fopen(file_name_location, "r"); 
-  FILE *fpLocationsout = fopen(strcat(file_name_location,".out"), "w"); 
+  FILE *fpLocationsout = fopen(bbb, "w"); 
   char line[1024];   
   char lineout[2048];
   fgets(line, 1024, fpLocations);

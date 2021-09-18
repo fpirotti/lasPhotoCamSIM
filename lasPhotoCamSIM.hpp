@@ -136,10 +136,8 @@ void camera2image(polarCoordinate *pt, int projection, double c=1.0) {
 class quantizer{
   public:   
     float ***grids;  
-    float maxvalue=.0;
-    int mult=1; 
+    float maxvalue=.0; 
     int nPlots;
-    
     double maxx = .0; 
     double maxy = .0;
     
@@ -152,20 +150,28 @@ class quantizer{
     point *plotCenters;
     float *plotGapFraction; 
     char *basename;
+    char *projchar;
     
     quantizer(  int plots, point *plotPositions,  
               float zenCut1=(M_PI/2.0), 
               int orast1=180, bool toLog1=false,  bool toDb1=false, 
-              float weight1=1.0,  char *basename1=NULL, int mult=1) { 
-      
-      this->mult = mult;
+              float weight1=1.0,  char *basename1=NULL, char *projchar1=NULL ) { 
+       
       this->plotGapFraction = new float[plots];  
+       
+      if(projchar1==NULL){
+        this->projchar=strdup("eqa");
+        fprintf(stderr, "Projection null!!!!!.\n");
+        
+      } else {
+        this->projchar =strdup(projchar1);  
+      }
       
       if(basename1==NULL){
         this->basename=strdup("lasPhotoCamSIMoutputCSV");
       } else {
         this->basename=strdup(basename1); 
-        }
+      }
       
       this->zenCut=zenCut1;
       this->orast=orast1;
@@ -218,7 +224,7 @@ class quantizer{
       }
     }; 
       
-   void image2grid(int plotn, polarCoordinate *pt, int projection=2,  bool verbose=false) {
+   void image2grid(int plotn, polarCoordinate *pt,    bool verbose=false) {
      
      if(!pt->planar.isImage) return;
      int x, y;
@@ -261,6 +267,8 @@ class quantizer{
    char outfilenamet[1024];
    char outfilename[2048];
    
+    
+   
    if(verbose) {
      fprintf(stderr, "Doing image for plot %d\n", plotn);
      if(this->toDb) fprintf(stderr, "Converting to dB ....\n"); 
@@ -269,13 +277,13 @@ class quantizer{
    
    
    if(this->toDb){
-    sprintf (outfilenamet,  "%s.plot%03d_dB", basename,  (plotn+1));
+    sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_dB", basename,  (plotn+1), projchar, (int)zenCut, orast );
    } 
    else if(this->toLog){
-     sprintf (outfilenamet,  "%s.plot%03d_log10", basename, (plotn+1));
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_log10", basename, (plotn+1), projchar, (int)zenCut, orast );
    }
    else {
-     sprintf (outfilenamet,  "%s.plot%03d", basename, (plotn+1));
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d", basename, (plotn+1), projchar, (int)zenCut, orast );
    }
    
    if(this->weight!=0.0){
