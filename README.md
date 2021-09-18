@@ -1,10 +1,15 @@
 # lasPhotoCamSIM
 
 
-Provides a simulated photograph at user-defined positions in a point cloud, with  calculation of how much light arrives to the lens and grids projected with four mathematical hemispherical lens models: equiangular, equidistant, stereographic, and orthographic.
+Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with four mathematical hemispherical lens models: equiangular, equidistant, stereographic, and orthographic. **For now only upward looking hemispherical photography is implemented**.
 
 
 <img src="./img1.jpg" />
+Figure 1. Example over a UAV lidar flight with 5000 points per square meter.
+
+
+<img src="./img2.jpg" />
+Figure 1. Example over a UAV lidar flight with 50 points per square meter.
 
 See paper XXXX
 
@@ -85,10 +90,12 @@ After running, the ouput will create a file in the same directory **cameras.csv.
  
 **-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided. The name of the output files will be: Plot_\<Number in 00X format\>\<-log or -db if trasformation was used\>\<-ort, -eqd -eqa -str depending on the projection chosen\>.asc 
 
+**-ori \<0.0 180.0 0.0\>**- camera orientation, pitch, yaw and roll/tilt angles in degrees (optional). If not set, it implies an upward looking camera. E.g. 0.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted.
+NB upward looking camera has pitch at 90 degrees corresponds to 0 degrees zenith angle - dont confuse the -zenCut value, that is in zenith angle. 
 
 **-maxdist: \<distance in meters\>**: *default=1000.0* - any points falling outside this distance from the camera center will be ignored.   
 
-**-log10**: converts pixel values, which represent point counts, to log10 scale (-orast must be also present) - formula is log10(pixelvalue+1). 
+**-log**: converts pixel values, which represent point counts, to log10 scale (-orast must be also present) - formula is log10(pixelvalue+1). 
 Cells with no pixels (value=0) are thus given log(1) and have value 0 also after transformation.  This can be helpful as high zenith angles will obviously intersect a very high number of poitnts. Log-transformation can scale to better visualize results. 
 
 **-db**: converts to dB (decibel values) with -10*log10(pixelvalue/maxPixelValue). The pixel with most point counts will have value 1, the other will have positive values.  

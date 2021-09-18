@@ -192,10 +192,12 @@ class quantizer{
       fprintf(stderr, "\n==============================\n"
                 "Setup with plot center (1st plot) %.5f %.5f \n" 
                 "zenCut=%.2f (radians)\n" 
-                "zenCut=%.2f (radians)\n" 
+                "zenCut=%.2f (degrees)\n" 
+                "grid size =%d\n" 
                 "\n", plotCenters[0].x, plotCenters[0].y, 
                 this->zenCut, 
-                rad2deg(this->zenCut) );
+                rad2deg(this->zenCut),
+                this->orast);
       
       this->grids = (float***)malloc(sizeof( *grids)  * plots);
 
@@ -368,6 +370,38 @@ void printPoint(LASpoint *point){
           point->coordinates[0], 
           point->coordinates[1], 
           point->coordinates[2]);
+}
+
+void rotate(LASpoint *pt, double pitch, double roll, double yaw) {
+  double cosa = cos(yaw);
+  double sina = sin(yaw);
+  
+  double cosb = cos(pitch);
+  double sinb = sin(pitch);
+  
+  double cosc = cos(roll);
+  double sinc = sin(roll);
+  
+  double Axx = cosa*cosb;
+  double Axy = cosa*sinb*sinc - sina*cosc;
+  double Axz = cosa*sinb*cosc + sina*sinc;
+  
+  double Ayx = sina*cosb;
+  double Ayy = sina*sinb*sinc + cosa*cosc;
+  double Ayz = sina*sinb*cosc - cosa*sinc;
+  
+  double Azx = -sinb;
+  double Azy = cosb*sinc;
+  double Azz = cosb*cosc;
+  
+    double px = pt->coordinates[0];
+    double py = pt->coordinates[1];
+    double pz = pt->coordinates[2];
+    
+    pt->coordinates[0] = Axx*px + Axy*py + Axz*pz;
+    pt->coordinates[1] = Ayx*px + Ayy*py + Ayz*pz;
+    pt->coordinates[2] = Azx*px + Azy*py + Azz*pz;
+  
 }
 
 void original2cameracoords(LASpoint *pt, double x, double y, double z) {  
