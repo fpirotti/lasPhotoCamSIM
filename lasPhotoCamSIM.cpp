@@ -40,8 +40,11 @@ void usage(bool wait=false)
   fprintf(stderr,"lasPhotoCamSIM -i in.las -loc cameraXYZpositions.csv -verbose  -zCam 0.0 -zenithCut 89 -orast 180 -log \n"); 
   fprintf(stderr,"lasPhotoCamSIM -h\n");
   fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t- exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
-  fprintf(stderr,"-ori <0.0 180.0 0.0> \n\t- camera orientation, pitch, yaw and roll/tilt angles in degrees (optional)"
-            "If not set, it implies an upward looking camera. E.g. 0.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. "
+  fprintf(stderr,"-ori <0.0 180.0 0.0> \n\t- camera orientation, three angles, respectively "
+            "pitch, yaw and roll/tilt angles in degrees. It is an optional input."
+            "If not set, it implies an upward looking camera. "
+            "pitch min=-90 max=90; yaw min=0 max=360; roll/tilt min=-180 max 180"
+            "E.g. 0.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. "
             "NB pitch = 90-zenith degrees - dont confuse the -zenCut value, that is in zenith angles, with pitch angles. \n");
   fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that are further than this value from the center of the camera. \n");
   fprintf(stderr,"-log - converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
@@ -76,8 +79,9 @@ int main(int argc, char *argv[])
   float zenCut=deg2rad(89.9);
   float maxdist=1000.0;  // maximum distance to consider when counting points... 1 km
   int orast=180;
-  double oriZ=0.0;
-  double oriA=0.0;
+  double pitch=0.0;
+  double roll=0.0;
+  double yaw=0.0;
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
@@ -123,37 +127,52 @@ int main(int argc, char *argv[])
     {
       
       i++;
-      oriZ=atof(argv[i]);
-      if(oriZ<0.0||oriZ>180.0) {
-        fprintf(stderr, "ERROR:  zenith angle inserted is '%s'"
-                  " ONLY VALUES BETWEEN 0 AND 180 are allowed." 
+      pitch=atof(argv[i]);
+      if(oriZ< -90.0||oriZ>90.0) {
+        fprintf(stderr, "ERROR:  picth angle inserted is '%s'"
+                  " ONLY VALUES BETWEEN -90.0 AND 90.0 are allowed." 
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
       } ;
-      if(oriZ==0.0) {
+      if(pitch==0.0) {
         fprintf(stderr, "WARNING:  zenith angle inserted is '%s'"
-                  " this means that it will be upward looking just like defaults." 
+                  " this means that it will be  looking at the horizon." 
                   " - please check \n", 
                   argv[i]);   
       } 
       
       i++;
-      oriA=atof(argv[i]);
+      yaw=atof(argv[i]);
       
-      if(oriA==0.0) {
-        fprintf(stderr, "WARNING:  azimuth angle inserted is '%s'." 
+      if(yaw==0.0) {
+        fprintf(stderr, "WARNING:  roll angle inserted is '%s'." 
                   " - please check \n", 
                   argv[i]);   
       } 
-      if(oriA<0.0||oriA>360.0) {
-        fprintf(stderr, "ERROR:  azimunth angle inserted is '%s'"
+      if(yaw<0.0||yaw>360.0) {
+        fprintf(stderr, "ERROR:  yaw angle inserted is '%s'"
                   " ONLY VALUES BETWEEN 0 AND 360 are allowed." 
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
       } 
       
+      i++;
+      roll=atof(argv[i]);
+      
+      if(roll==0.0) {
+        fprintf(stderr, "WARNING:  roll angle inserted is '%s'." 
+                  " - please check \n", 
+                  argv[i]);   
+      } 
+      if(roll<-360.0||roll>360.0) {
+        fprintf(stderr, "ERROR:  yaw angle inserted is '%s'"
+                  " ONLY VALUES BETWEEN 0 AND 360 are allowed." 
+                  " - please check \n", 
+                  argv[i]);  
+        byebye(true, argc==1);
+      } 
     }
     else if (strcmp(argv[i],"-orast") == 0 )
     {
