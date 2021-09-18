@@ -48,10 +48,10 @@ int main(int argc, char *argv[])
   int maxlines=100;
   // FILE*  fpOutput;
   char file_name_location[256];
-  float zCam=1.3;
-  float zenCut=90.0;
+  float zCam=.0f;
+  float zenCut=deg2rad(89.9);
   float maxdist=1000.0;  // maximum distance to consider when counting points... 1 km
-  int createRasters=180;
+  int orast=180;
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
@@ -94,7 +94,15 @@ int main(int argc, char *argv[])
     } 
     else if (strcmp(argv[i],"-orast") == 0 )
     {
-      createRasters=true;
+      i++;
+      orast=atoi(argv[i]);
+      if(orast==0.0) {
+        fprintf(stderr, "ERROR:  argument -orast '%s'"
+                  " was converted to 0 which is not possible as it represents the width/height in pixels of the output square grid." 
+                  " - please check \n", 
+                  argv[i]);  
+        byebye(true, argc==1);
+      } ;
     }
     else if (strcmp(argv[i],"-log") == 0 )
     {
@@ -166,7 +174,7 @@ int main(int argc, char *argv[])
     { 
       i++;
       zenCut=atof(argv[i]);
-      if(zenCut==0.0) {
+      if(zenCut==0.0 ) {
         fprintf(stderr, "WARNING:  argument -zenCut '%s' was converted to 0.0 zenith angle which means no field of view for camera (zenith angle 90° == horizon) - please check \n", 
                 argv[i]);  
       }
@@ -175,14 +183,15 @@ int main(int argc, char *argv[])
                 argv[i]);  
         byebye(true, argc==1);
       }
+      zenCut = deg2rad(zenCut);
     } 
     else if (strcmp(argv[i],"-zCam") == 0)
     { 
       
       i++;
       zCam=atof(argv[i]);
-      if(zCam <= 0.0) {
-        fprintf(stderr, "WARNING:  argument '-zCam %s' was converted to 0.0 or lower camera height  - please check if this is what you want.\n", 
+      if(zCam <  0.0) {
+        fprintf(stderr, "WARNING:  argument '-zCam %s' was converted to  a camera height lower than 0.0 m  - please check if this is what you want.\n", 
                 argv[i]);  
       }
     } 
@@ -320,6 +329,7 @@ int main(int argc, char *argv[])
       if(plotPositions[nPositions].z==.0){
         fprintf(stderr, "WARNING: read coordinate Z with 0.0 value... make sure it is correct \n"); 
       }
+      plotPositions[nPositions].z = plotPositions[nPositions].z + zCam;
       free(tofree);
         
       if(nPositions>(maxlines-1)){
@@ -347,7 +357,7 @@ int main(int argc, char *argv[])
   
   
   quantizer *collector = new quantizer(AZIMUTHS,  ZENITHS*mult, nPositions, plotPositions, 
-                                       zCam, zenCut,  createRasters, toLog,  toDb, weight,
+                                       zenCut,  orast, toLog,  toDb, weight,
                                        file_name_location ); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
@@ -385,9 +395,9 @@ int main(int argc, char *argv[])
         else  fprintf(stderr, "\b\b\b%02d%%",  (int) ((float)lasreader->p_count/(float)lasreader->npoints*q)) ;
       }
       
-      if(  lasreader->point.get_z() < zCam   ){
-        continue;  
-      }
+      // if(  lasreader->point.get_z() < zCam   ){
+      //   continue;  
+      // }
       
       for(int i=0; i<nPositions; ++i){
         // grab coordinates 
@@ -400,8 +410,16 @@ int main(int argc, char *argv[])
         polCrt = crtPlot2polar(&lasreader->point);
         if( polCrt.distance > maxdist ) continue; 
         
-        camera2image(polCrt, proj);
-        collector->fillDomeGrid( polCrt, i);
+        // fprintf(stderr, "\n 1111.aaaa%f\n " , polCrt.planar.x );
+        camera2image( &polCrt, proj, 1.0);
+        
+        // point is below cutoff angle  
+        if( polCrt.zenith > zenCut ) continue;  
+        
+        // if(polCrt.planar.isImage) 
+        // fprintf(stderr, "\n 2222.aaaa%f\n " , polCrt.planar.x );
+        collector->image2grid(i,  &polCrt, proj );
+        // fprintf(stderr, "\n 2222.aaaa%f\n " , polCrt.planar.x );
       
       } 
       
@@ -409,9 +427,9 @@ int main(int argc, char *argv[])
     } 
      
     #ifdef _WIN32
-      if (verbose) fprintf(stderr,"total time: %g sec   for %I64d points\n", taketime()-start_time,   lasreader->p_count);
+      if (verbose) fprintf(stderr,"\ntotal time: %g sec   for %I64d points\n", taketime()-start_time,   lasreader->p_count);
     #else
-      if (verbose) fprintf(stderr,"total time: %g sec   for %lld points\n", taketime()-start_time, lasreader->p_count);
+      if (verbose) fprintf(stderr,"\ntotal time: %g sec   for %lld points\n", taketime()-start_time, lasreader->p_count);
     #endif
     
     lasreader->close();

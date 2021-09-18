@@ -53,26 +53,105 @@ struct polarCoordinate
   double distance=0;
   double distance2d=0;
   point planar;
-  point image;
 };
-// struct quantizer
-// { 
-//   int nAzimuths = AZIMUTHS;
-//   int nZeniths = ZENITHS;
-//   int hits[AZIMUTHS][ZENITHS];
-// };
+
+
+
+void camera2imageStr(polarCoordinate *pt, double c=1.0 ) {  
+  double x, y;
+  
+  if(pt->distance2d==0) {x=.0; y=.0;} 
+  else { 
+    x = (tan(pt->zenith/2.0) * 2.0 * cos(pt->azimuth))/ tan(M_PI/4.0); 
+    y = (tan(pt->zenith/2.0) * 2.0 * sin(pt->azimuth))/ tan(M_PI/4.0); 
+  }
+  
+  pt->planar.x = x;  
+  pt->planar.y = y;  
+  pt->planar.isImage=true;   
+}
+
+void camera2imageEqd(polarCoordinate *pt, double c=1.0) {  
+  double x, y;
+   x =   (pt->zenith * cos(pt->azimuth))/(M_PI/2.0);   
+   y =   (pt->zenith * sin(pt->azimuth))/(M_PI/2.0);   
+  pt->planar.x = x;  
+  pt->planar.y = y;  
+  pt->planar.isImage=true;
+}
+
+void camera2imageEqa(polarCoordinate *pt, double c=1.0) {  
+  double x, y;
+  // x = sin(pt->zenith/2.0) * 2.0 * cos(pt->azimuth);  
+  // y = sin(pt->zenith/2.0) * 2.0 * sin(pt->azimuth); 
+  x = (sin(pt->zenith/2.0) * cos(pt->azimuth)) / sin(M_PI/4.0);  
+  y = (sin(pt->zenith/2.0) * sin(pt->azimuth)) / sin(M_PI/4.0); 
+  pt->planar.x = x;  
+  pt->planar.y = y;  
+  pt->planar.isImage=true;
+  // fprintf(stderr, "\n ....%f %d", x, pt->planar.isImage);    
+}
+
+void camera2imageOrt(polarCoordinate *pt, double c=1.0) {  
+  
+  double x, y;
+  x = (sin(pt->zenith)  * cos(pt->azimuth));  
+  y = (sin(pt->zenith)  * sin(pt->azimuth));  
+  
+  pt->planar.x = x;  
+  pt->planar.y = y;  
+  pt->planar.isImage=true;   
+}
+
+void camera2imageRect(polarCoordinate *pt, double c=1.0, double fov=M_PI/4) {  
+  double x, y;
+  
+  if(pt->distance2d==0) {x=.0; y=.0;} 
+  else if(pt->zenith > fov ) { 
+    pt->planar.isImage=false;  
+    } 
+  else  { 
+    x = tan(pt->zenith)  * cos(pt->azimuth); 
+    y = tan(pt->zenith)  * sin(pt->azimuth); 
+    pt->planar.x = x;  
+    pt->planar.y = y;  
+    pt->planar.isImage=true; 
+  }
+  
+}
+
+// NB requires that point coordinates are relative to camera space (original2cameracoords) and that polar coordinates are provided
+void camera2image(polarCoordinate *pt, int projection, double c=1.0) {  
+  
+  if(projection==1) camera2imageStr(pt,c);
+  else if(projection==2) camera2imageEqa(pt,c);
+  else if(projection==3) camera2imageEqd(pt,c);
+  else if(projection==4) camera2imageOrt(pt,c);
+  else {
+    camera2imageEqa(pt,c);
+  }
+  // atan2()
+  
+  // pt->coordinates[0];
+  // pt->coordinates[1];
+  // pt->coordinates[2];
+}
+
+
 class quantizer{
   public: 
     int nAzimuths;
     int nZeniths;
     int nPlots;
-    float ***domes; 
-    float **images; 
+    float ***grids;  
     float maxvalue=.0;
-    int mult=1;
-    float zCam=1.3;
+    int mult=1; 
+    
+    double maxx = .0; 
+    double maxy = .0;
+    
     float zenCut=90.0;
-    bool cRaster=false;
+    int orast=180;
     bool toLog=false;
     bool toDb=false;
     float weight=1.0;
@@ -80,9 +159,9 @@ class quantizer{
     float *plotGapFraction; 
     char *basename;
     
-    quantizer(int az, int ze, int plots, point *plotPositions, float zCam1=1.3, 
+    quantizer(int az, int ze, int plots, point *plotPositions,  
               float zenCut1=90.0, 
-              bool cRaster1=false, bool toLog1=false,  bool toDb1=false, 
+              int orast1=180, bool toLog1=false,  bool toDb1=false, 
               float weight1=1.0,  char *basename1=NULL, int mult=1) { 
       
       this->mult = mult;
@@ -96,13 +175,13 @@ class quantizer{
         this->basename=strdup(basename1); 
         }
       
-      this->cRaster=cRaster1;
+      this->orast=orast1;
       this->toLog=toLog1;
       this->toDb=toDb1;
       this->weight=weight1;
       
-      nPlots=plots;
-      this->zCam=zCam1;
+      this->nPlots=plots;
+ 
       this->zenCut=zenCut1;
       plotCenters = plotPositions; 
       
@@ -114,51 +193,33 @@ class quantizer{
       fprintf(stderr, "\n==============================\n"
                 "Setup with plot center (1st plot) %.5f %.5f \n"
                 "nZenith=%d  "
-                "nAzimuths=%d  " 
-                "zCam=%.2f  "
+                "nAzimuths=%d  "  
                 "zenCut=%.2f" 
                 "\n", plotCenters[0].x, plotCenters[0].y,
                 this->nZeniths,
-                this->nAzimuths,
-                this->zCam, 
+                this->nAzimuths, 
                 this->zenCut);
       
-      this->domes = (float***)malloc(sizeof( *domes)  * plots);
-      if(this->cRaster)  this->images = (float**)malloc(sizeof( *images) * plots);  
-      // this->images[i] = (int*)malloc(sizeof(*this->images[i]) * nZeniths); 
-      if (this->domes  )
+      this->grids = (float***)malloc(sizeof( *grids)  * plots);
+
+      if (this->grids  )
       {
         int i;
         for (i = 0; i < plots; i++)
         {
           this->plotGapFraction[i]=0.0;
-          this->domes[i] = (float**)malloc(sizeof(*this->domes[i])  * ZENITHS);   
+          this->grids[i] = (float**)malloc(sizeof(*this->grids[i])  * orast );   
+           
           
-          if(this->cRaster) {
-            this->images[i] =  new float[(nZeniths*nZeniths*mult)];   
-            // initialize nodata values -1 outside circle and zeros
-            for(int iii=0; iii < (nZeniths*nZeniths*mult); iii++){
-              int y=floor(iii/nZeniths) - nZeniths/2.0;
-              int x=floor(iii%nZeniths) - nZeniths/2.0;
-              float d=sqrt(y*y + x*x);
-              if( d > nZeniths/2 ) this->images[i][iii] = -1.0f;
-              else this->images[i][iii] = 0.0f;
-              // 
-              // fprintf(stderr,"<press %.f %d %d %.4f ENTER>\n", this->images[i][iii], x, y, d);
-              // getc(stdin);
-            }
-          }
-          
-          if (this->domes[i] )
-          {
-            int j;
-            for (j = 0; j < ZENITHS; j++)
+          if (this->grids[i] )
+          { 
+            for (int j = 0; j < ZENITHS; j++)
             {
-              this->domes[i][j] =  new float[AZIMUTHS];  
-              memset( this->domes[i][j], 0, (AZIMUTHS)*sizeof(float) );
-              for(int iii=0; iii < AZIMUTHS; iii++){
-                this->domes[i][j][iii]=0.0f;
-                }
+              this->grids[i][j] =  new float[orast];  
+              memset( this->grids[i][j], 0, (orast)*sizeof(float) );
+              for(int iii=0; iii < orast; iii++){
+                this->grids[i][j][iii]=0.0f;
+              }
             }
           }
         }
@@ -190,88 +251,51 @@ class quantizer{
          fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
        }
        return(ptProjected);
-     };
-     
-   void fillDomeGrid2(double az, double zen, double dist, int plotn=0){
-     
-     // counts for gap fraction are always 1°x1°
-     
-     int a= (int)(floor(az));
-     if(a== nAzimuths) a--;
-     // NB zenith is from 0 to 90 ( asin of positive values between 0 and 1) so we scale to nZeniths... e.g. if 180 nZeniths, zenith*2
-     int z= (int)(floor(zen*2));
-     if(z==nZeniths) z--;
-     if ( this->domes[plotn][z][a] < (float)(INT32_MAX - 1)) {
-       this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0/pow((dist+0.05),weight);
-       // else  this->domes[plotn][z][a]=this->domes[plotn][z][a]+1.0;
-     } 
-     
-     if(maxvalue < this->domes[plotn][z][a]) maxvalue = this->domes[plotn][z][a];
-     
-     if(this->cRaster){
-       arrIdx idx;
-       idx = polar2plane( az, zen, this->nZeniths );
-       int fidx = nZeniths*idx.row+idx.col;
-       
-       if(this->weight && dist>1.0) images[plotn][fidx]=images[plotn][fidx]+1.0/pow((dist+0.05),weight);
-       else images[plotn][fidx]=images[plotn][fidx]+1.0;
-       
-       // if(this->weight && dist>1.0) {fprintf(stderr, "ww==%.3f dist=%.3f www %.4f wwww %.4f\n", 
-       //    this->weight, dist, images[plotn][fidx], 1.0/pow(dist,0.5) );
-       //   
-       //   fprintf(stderr,"<press ENTER>\n");
-       //   getc(stdin);
-       // }
-       
-     }
-     
-   }; 
-   
-   void fillDomeGrid(polarCoordinate p, int plotn=0 ){
-     if(p.zenith > this->zenCut ) return;
-     fillDomeGrid2( p.azimuth, p.zenith, p.distance,    plotn );
-   }; 
-   
-   bool finalizePlotDome(int plotn,   bool verbose=false) {   
-     int hits = 0; 
-     // int imagea[(nZeniths*nZeniths)];
-     // memset( imagea, 0, (nZeniths*nZeniths)*sizeof(int) );
-      
-     // USING ZENITS because it is fixed 180  because zenit is 0.5°;
-     for(int z=0; z <  ZENITHS; z++ ){
-       for(int az=0; az <  AZIMUTHS; az++ ){
-         if(this->domes[plotn][z][az] > 0) hits++; 
-       }
-     }
-     
-     this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ceil(zenCut*2))) * 100.0) ;
-     if(this->cRaster){
-       dome2asc(plotn,  images[plotn] , verbose);
-     }
-     return(true); 
    };
-   
-   
-   float* finalizePlotDomes(bool verbose=false) { 
+ 
+ 
+   void image2grid(int plotn, polarCoordinate *pt, int projection=2,  bool verbose=false) {
      
+     if(!pt->planar.isImage) return;
+     int x, y;
+     x = (int)floor(((double)this->orast * pt->planar.x + (double)this->orast)/2.0);
+     y = (int)floor(((double)this->orast * pt->planar.y + (double)this->orast)/2.0);
+     // if(x > (this->orast-1)) x--;
+     // if(y==this->orast) y--;
+     
+     if(x < 0 || x >= this->orast || y < 0 || y >= this->orast )
+       fprintf(stderr, "\n az=%f zen=%f ------- %f  \t  \n%.2f  %f \n%.2f  %f -- \n%d\t%d \t%f \n"  ,
+               pt->azimuth, pt->zenith,
+             (double)this->orast,
+             this->orast * pt->planar.x,
+             this->orast * pt->planar.y,
+             pt->planar.x,
+             pt->planar.y,
+             x, y, ((double)this->orast * pt->planar.y + (double)this->orast) );
+     // if(x < this->maxx)    this->maxx = x;
+     // if(y < this->maxy)    this->maxy = y;
+       
+     this->grids[plotn][y][x] = this->grids[plotn][y][x] + (1.0/pow((pt->distance+0.05),weight));
+   }
+   
+  
+   float* finalizePlotDomes(bool verbose=false) {
+
       if(plotGapFraction==NULL){
-        return(NULL); 
+        return(NULL);
       }
-      
+
       for(int i0=0; i0 <  nPlots; i0++ ){
-        finalizePlotDome(i0,  verbose);
+        dome2asc(i0,  grids[i0] , verbose);
         if(verbose) fprintf(stderr, "%.2f\n", plotGapFraction[i0]);
       }
       return(plotGapFraction);
-    };
-   
+    }; 
  
- 
- bool dome2asc(int plotn, float *image, bool verbose=false){
+ bool dome2asc(int plotn, float **image, bool verbose=false){
    
    char outfilenamet[1024];
    char outfilename[2048];
-   // char outfilename2[1024];
    
    if(verbose) {
      fprintf(stderr, "Doing image for plot %d\n", plotn);
@@ -296,8 +320,7 @@ class quantizer{
      sprintf(outfilename, "%s.asc", outfilenamet);
    }
      
-   // sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
-   
+     
    FILE *out= fopen(outfilename, "w");
    
    fprintf(out, "ncols         %d \n"
@@ -305,16 +328,23 @@ class quantizer{
              "xllcorner     %f\n"
              "yllcorner     %f\n"
              "cellsize      %f \n"
-             "NODATA_value  -1\n", nZeniths, nZeniths, 
-             (plotCenters[plotn].x - (float)nZeniths/( (float)nZeniths/90.0) ), 
-             (plotCenters[plotn].y - (float)nZeniths/( (float)nZeniths/90.0) ),
-             (180.0/(float)nZeniths) );
+             "NODATA_value  -1\n", this->orast , this->orast, 
+             (plotCenters[plotn].x - (float)this->orast/( (float)this->orast/90.0) ), 
+             (plotCenters[plotn].y - (float)this->orast/( (float)this->orast/90.0) ),
+             (180.0/(float)this->orast) );
    
-   for (int row = 0; row < nZeniths; row++)
-   {  
-     // memcpy(buf,  &image[nZeniths*row], linebytes);  
-     for (int col = 0; col < nZeniths; col++){
-       float v=((float)(image[nZeniths*row+col]));
+   
+   
+
+   int hits=0;
+   for (int row = 0; row < this->orast; row++)
+   {   
+     for (int col = 0; col < this->orast; col++){
+       
+       float v=((float)(image[row][col])) * this->orast; 
+        
+       // fprintf(stderr, "\n ------- %.2f   "  , v);
+       
        if(v < .0f){
          fprintf(out, "-1.0 "   ) ;
          continue;
@@ -328,7 +358,7 @@ class quantizer{
          fprintf(out, "%.6f " ,  -10.0*log10((v+1) / (maxvalue+1)) ) ;
          continue;
        }
-      fprintf(out, "%.4f " , image[nZeniths*row+col]) ; 
+      fprintf(out, "%.2f " , v) ; 
      }
      fprintf(out, "\n"   ) ; 
     }
@@ -337,6 +367,9 @@ class quantizer{
    
    fclose(out);  
    if(verbose) fprintf(stderr, "Written file %s with  image for plot %d\n", outfilename, plotn);  
+    
+   
+   this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ceil(zenCut*2))) * 100.0) ;
     
    return(true);
    
@@ -417,16 +450,16 @@ class quantizer{
 void usage(bool wait=false)
 {
   fprintf(stderr,"usage:\n");
-  fprintf(stderr,"lasPhotoCamSIM -i in.las -loc plotPositions.csv -verbose  -zCam 1.3 -zenithCut 89 -orast -log \n"); 
+  fprintf(stderr,"lasPhotoCamSIM -i in.las -loc plotPositions.csv -verbose  -zCam 0.0 -zenithCut 89 -orast -log \n"); 
   fprintf(stderr,"lasPhotoCamSIM -h\n");
-  fprintf(stderr,"-orast <size of square in pizels> default=180 - exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
-  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 - will ignore any points that are further than this value from the center of the camera. \n");
-  fprintf(stderr,"-log converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
-  fprintf(stderr,"-loc <file path> is the path to a CSV file with X Y coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
-  fprintf(stderr,"-zCam <height value in meters> default=1.3m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
+  fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t- exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
+  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that are further than this value from the center of the camera. \n");
+  fprintf(stderr,"-log - converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
+  fprintf(stderr,"-loc <file path> \n\t- is the path to a CSV file with X Y and Z coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
+  fprintf(stderr,"-zCam <height value in meters> default=0.0m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
   fprintf(stderr,"-zenCut <Zenith angle in degrees> default=89° \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle \n\t(e.g. at 1km distance any point lower than 17.5 m height with respect to the camera ) .  \n");
   fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images 180x180 pixels in ESRI GRID ASCII format (https://en.wikipedia.org/wiki/Esri_grid).  \n");
-  fprintf(stderr,"Version 0.9: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
+  fprintf(stderr,"Version 0.95: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
   if (wait)
   {
     fprintf(stderr,"<press ENTER>\n");
@@ -464,79 +497,6 @@ void cameraCoords2original(LASpoint *pt, double x, double y, double z) {
   pt->coordinates[2] = pt->coordinates[2]+z;
 }
 
-
-void camera2imageStr(polarCoordinate pt, double c=1.0 ) {  
-  double x, y;
-  
-  if(pt.planar.x) {x=.0;}
-  else { x = c * tan( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
-                         
-  if(pt.planar.y){ y=.0;}
-  else { y = c  * tan( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
-  
-  pt.planar.x = x;  
-  pt.planar.y = y;  
-  pt.planar.isImage=true;   
-}
-
-void camera2imageEqd(polarCoordinate pt, double c=1.0) {  
-  double x, y;
-  
-  if(pt.planar.x) {x=.0;}
-  else { x = c * atan2(pt.distance, pt.planar.z)  / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
-  
-  if(pt.planar.y){ y=.0;}
-  else { y = c * atan2(pt.distance, pt.planar.z)  / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
-  
-  pt.planar.x = x;  
-  pt.planar.y = y;  
-  pt.planar.isImage=true;
-}
-
-void camera2imageEqa(polarCoordinate pt, double c=1.0) {  
-  double x, y;
-  
-  if(pt.planar.x) {x=.0;}
-  else { x = c *  sin( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
-  
-  if(pt.planar.y){ y=.0;}
-  else { y = c * sin( 0.5 * atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
-  
-  pt.planar.x = x;  
-  pt.planar.y = y;  
-  pt.planar.isImage=true;    
-}
-
-void camera2imageOrt(polarCoordinate pt, double c=1.0) {  
-  double x, y;
-  
-  if(pt.planar.x) {x=.0;}
-  else { x = c *  sin(  atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.y/pt.planar.x),2.0) + 1.0 ) ;}
-  
-  if(pt.planar.y){ y=.0;}
-  else { y = c  * sin(   atan2(pt.distance, pt.planar.z) ) / sqrt( pow((pt.planar.x/pt.planar.y),2.0) + 1.0 ) ;}
-  
-  pt.planar.x = x;  
-  pt.planar.y = y;  
-  pt.planar.isImage=true;   
-}
-
-// NB requires that point coordinates are relative to camera space (original2cameracoords) and that polar coordinates are provided
-void camera2image(polarCoordinate pt, int projection, double c=1.0) {  
-  
-  if(projection==1) camera2imageStr(pt,c);
-  else if(projection==2) camera2imageEqa(pt,c);
-  else if(projection==3) camera2imageEqd(pt,c);
-  else if(projection==4) camera2imageOrt(pt,c);
-  else {
-    
-    }
-  // atan2()
-  
-  // pt->coordinates[0];
-  // pt->coordinates[1];
-  // pt->coordinates[2];
-}
  
 double distance3d(LASpoint *pt, double x=0, double y=0, double z=0, bool verbose=false) {  
   double dist = sqrt((pt->coordinates[0]-x)*(pt->coordinates[0]-x) + (pt->coordinates[1]-y)*(pt->coordinates[1]-y)  + (pt->coordinates[2]-z)*(pt->coordinates[2]-z) );
@@ -578,7 +538,7 @@ void crt2eqd(LASpoint *pt) {
 
 // crtPlot coordinates referred to plot center (see original2plotCoords function)
 
-polarCoordinate crtPlot2polar(LASpoint *pt) {  
+polarCoordinate  crtPlot2polar(LASpoint *pt) {  
   
   polarCoordinate pol;
   pol.distance = distance3d(pt);
@@ -591,8 +551,8 @@ polarCoordinate crtPlot2polar(LASpoint *pt) {
     pol.azimuth = 0;
     pol.zenith = 0;
   } else{ 
-    pol.azimuth = rad2deg( atan2(pt->coordinates[1],pt->coordinates[0]) )+180.0;
-    pol.zenith =  rad2deg( acos(pt->coordinates[2] / pol.distance) );
+    pol.azimuth = ( atan2(pt->coordinates[1],pt->coordinates[0]) );
+    pol.zenith =  ( acos(pt->coordinates[2] / pol.distance) );
   }
   return(pol);
 }
