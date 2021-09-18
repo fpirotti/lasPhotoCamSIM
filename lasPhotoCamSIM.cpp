@@ -147,8 +147,8 @@ int main(int argc, char *argv[])
         proj=4; 
       } else {
         fprintf(stderr, "ERROR:  argument -proj '%s'"
-                  " not correct. Possible values are: eqa, eqd, str, ort respectively"
-                  " for equisolid-angl, equidistant, stereographic and orthographic projections"
+                  " not correct. Possible values are: \n\teqa, eqd, str, ort  \n\trespectively"
+                  " for : \n\tequisolid-angl, equidistant, stereographic and orthographic projections"
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
