@@ -139,18 +139,16 @@ void camera2image(polarCoordinate *pt, int projection, double c=1.0) {
 
 
 class quantizer{
-  public: 
-    int nAzimuths;
-    int nZeniths;
-    int nPlots;
+  public:   
     float ***grids;  
     float maxvalue=.0;
     int mult=1; 
+    int nPlots;
     
     double maxx = .0; 
     double maxy = .0;
     
-    float zenCut=90.0;
+    float zenCut=(M_PI/2.0);
     int orast=180;
     float radiusGrid=90.0f;
     bool toLog=false;
@@ -160,15 +158,13 @@ class quantizer{
     float *plotGapFraction; 
     char *basename;
     
-    quantizer(int az, int ze, int plots, point *plotPositions,  
-              float zenCut1=90.0, 
+    quantizer(  int plots, point *plotPositions,  
+              float zenCut1=(M_PI/2.0), 
               int orast1=180, bool toLog1=false,  bool toDb1=false, 
               float weight1=1.0,  char *basename1=NULL, int mult=1) { 
       
       this->mult = mult;
-      this->plotGapFraction = new float[plots];
-      this->nAzimuths=az;
-      this->nZeniths=ze;
+      this->plotGapFraction = new float[plots];  
       
       if(basename1==NULL){
         this->basename=strdup("lasPhotoCamSIMoutputCSV");
@@ -176,15 +172,15 @@ class quantizer{
         this->basename=strdup(basename1); 
         }
       
+      this->zenCut=zenCut1;
       this->orast=orast1;
-      this->radiusGrid = this->orast / 2.0;
+      this->radiusGrid = (this->orast / 2.0) * sin(this->zenCut) ;
       this->toLog=toLog1;
       this->toDb=toDb1;
       this->weight=weight1;
       
       this->nPlots=plots;
  
-      this->zenCut=zenCut1;
       plotCenters = plotPositions; 
       
       if(this->toDb && this->toLog){
@@ -193,14 +189,12 @@ class quantizer{
       }
       
       fprintf(stderr, "\n==============================\n"
-                "Setup with plot center (1st plot) %.5f %.5f \n"
-                "nZenith=%d  "
-                "nAzimuths=%d  "  
-                "zenCut=%.2f" 
-                "\n", plotCenters[0].x, plotCenters[0].y,
-                this->nZeniths,
-                this->nAzimuths, 
-                this->zenCut);
+                "Setup with plot center (1st plot) %.5f %.5f \n" 
+                "zenCut=%.2f (radians)\n" 
+                "zenCut=%.2f (radians)\n" 
+                "\n", plotCenters[0].x, plotCenters[0].y, 
+                this->zenCut, 
+                rad2deg(this->zenCut) );
       
       this->grids = (float***)malloc(sizeof( *grids)  * plots);
 
@@ -228,35 +222,7 @@ class quantizer{
         }
       }
     }; 
-     
-     
-    arrIdx polar2plane(double az, double zen, int gridWH=0, bool verbose=false) {  
-       arrIdx ptProjected;
-       if(gridWH==0){
-         gridWH = nZeniths;
-         if(verbose) fprintf(stderr, "WARNING: no size of projection grid, defaulting to %d;\n", nZeniths );
-       } 
-       
-       double az1 = deg2rad( ((double)az - 180.0) );
-       double zen1 = deg2rad( (double)zen );
-       
-       if(verbose && (az < 0 || az > 360.0 || zen < 0 || zen >= 90.0)  ) {
-         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
-       }
-       
-       ptProjected.row = (int)(floor(( (sin(zen1)*cos(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
-       ptProjected.col = (int)(floor(( (sin(zen1)*sin(az1) * (double)gridWH) + (double)gridWH)/2.0 ) );
-       
-       if(ptProjected.row==gridWH) ptProjected.row--;
-       if(ptProjected.col==gridWH) ptProjected.col--;
-       
-       if( ptProjected.row < 0 || ptProjected.col < 0 || ptProjected.row > (gridWH-1) || ptProjected.col  > (gridWH-1) ) {
-         fprintf(stderr, "WARNING: az=%.4f, z=%.4f\t==\trow=%d  col=%d\n", az, zen, ptProjected.row, ptProjected.col);
-       }
-       return(ptProjected);
-   };
- 
- 
+      
    void image2grid(int plotn, polarCoordinate *pt, int projection=2,  bool verbose=false) {
      
      if(!pt->planar.isImage) return;
@@ -340,6 +306,7 @@ class quantizer{
    
 
    int hits=0;
+   int total=0;
    for (int row = 0; row < this->orast; row++)
    {   
      for (int col = 0; col < this->orast; col++){
@@ -352,6 +319,9 @@ class quantizer{
          fprintf(out, "-1.0 "   ) ;
          continue;
        }
+       total++;
+       if(v > .0f) hits++; 
+       
        if(this->toLog){
          fprintf(out, "%.6f " , log10((v+1.0)) ) ;
          continue;
@@ -372,104 +342,13 @@ class quantizer{
    if(verbose) fprintf(stderr, "Written file %s with  image for plot %d\n", outfilename, plotn);  
     
    
-   this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) AZIMUTHS*(ceil(zenCut*2))) * 100.0) ;
+   this->plotGapFraction[plotn] = 100.0 - ((double)hits / ((double) total) * 100.0) ;
     
    return(true);
    
  }
 };
 
- 
-   
-//    
-//    bool dome2tiff(int plotn, int *image, bool verbose=false, bool tolog=false){
-//       
-//        char outfilename[1024];
-//        char outfilename2[1024];
-//         
-//        if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
-//        
-//        sprintf (outfilename,  "Plot_%03d.tif", (plotn+1));
-//        sprintf (outfilename2, "Plot_%03d.tfw", (plotn+1));
-//        
-//        TIFF *out= TIFFOpen(outfilename, "wb");
-// 
-//        TIFFSetField(out, TIFFTAG_IMAGEWIDTH, nZeniths);  // set the width of the image
-//        TIFFSetField(out, TIFFTAG_IMAGELENGTH, nZeniths);    // set the height of the image
-//        TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
-//        TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 32);    // set the size of the channels
-//        TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
-//        //   Some other essential fields to set that you do not have to understand for now.
-//        TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-//        TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-//        
-//        tsize_t linebytes = sizeof(int) * nZeniths;     
-//        int *buf = NULL;   float *buff=NULL;     // buffer used to store the row of pixel information for writing to file
-//        //    Allocating memory to store the pixels of current row
-//        if (TIFFScanlineSize(out)==linebytes){
-//          buf =(int *)_TIFFmalloc(linebytes);
-//          buff =(float *)_TIFFmalloc(linebytes);
-//        } else{
-//          buf = (int *)_TIFFmalloc(TIFFScanlineSize(out));  
-//          buff =(float *)_TIFFmalloc(TIFFScanlineSize(out));
-//          fprintf(stderr, "WARNING 2  %ld  %ld  %ld\n",  TIFFScanlineSize(out), TIFFScanlineSize(out), linebytes ) ;
-//        }
-//        // We set the strip size of the file to be size of one row of pixels
-//        TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, linebytes));
-//        // if(verbose) fprintf(stderr, "Do  %d\n",  image[11] ) ;
-//        //Now writing image to the file one strip at a time
-//        for (int row = 0; row < nZeniths; row++)
-//        { 
-//          // if(verbose) fprintf(stderr, "Do  %d\n",  image[row+10] ) ; 
-//          memcpy(buf,  &image[nZeniths*row], linebytes); 
-//          memcpy(buff, &image[nZeniths*row], linebytes); 
-//          
-//          // for (int roww = 0; roww < nZeniths; roww++) buff[roww] = log((double)(buff[roww]));
-//          
-//          if (TIFFWriteScanline(out, buff, row, 0) < 0){
-//             if(verbose){ 
-//               fprintf(stderr, "WARNING  %d\n",  row ) ;
-//               fprintf(stderr,"<press ENTER>\n");
-//               getc(stdin);
-//               }
-//            break; 
-//            }
-//        }
-//         
-//        TIFFClose(out); 
-//        if (buf)
-//          _TIFFfree(buf);
-//        if (buff)
-//          _TIFFfree(buff);
-//        if(verbose) fprintf(stderr, "Done image for plot %d\n", plotn); 
-//      
-//      if(verbose) fprintf(stderr, "Doing image for plot %d\n", plotn);
-//      return(true);
-//      
-//    }
-// };
-
-
-void usage(bool wait=false)
-{
-  fprintf(stderr,"usage:\n");
-  fprintf(stderr,"lasPhotoCamSIM -i in.las -loc plotPositions.csv -verbose  -zCam 0.0 -zenithCut 89 -orast -log \n"); 
-  fprintf(stderr,"lasPhotoCamSIM -h\n");
-  fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t- exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
-  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that are further than this value from the center of the camera. \n");
-  fprintf(stderr,"-log - converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
-  fprintf(stderr,"-loc <file path> \n\t- is the path to a CSV file with X Y and Z coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
-  fprintf(stderr,"-zCam <height value in meters> default=0.0m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
-  fprintf(stderr,"-zenCut <Zenith angle in degrees> default=89° \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle \n\t(e.g. at 1km distance any point lower than 17.5 m height with respect to the camera ) .  \n");
-  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images 180x180 pixels in ESRI GRID ASCII format (https://en.wikipedia.org/wiki/Esri_grid).  \n");
-  fprintf(stderr,"Version 0.95: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
-  if (wait)
-  {
-    fprintf(stderr,"<press ENTER>\n");
-    getc(stdin);
-  }
-  exit(1);
-}
 
 
 
