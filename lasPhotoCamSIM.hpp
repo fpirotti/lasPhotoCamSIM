@@ -277,13 +277,13 @@ class quantizer{
    
    
    if(this->toDb){
-    sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_dB", basename,  (plotn+1), projchar, (int)zenCut, orast );
+    sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_dB", basename,  (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
    } 
    else if(this->toLog){
-     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_log10", basename, (plotn+1), projchar, (int)zenCut, orast );
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_log10", basename, (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
    }
    else {
-     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d", basename, (plotn+1), projchar, (int)zenCut, orast );
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d", basename, (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
    }
    
    if(this->weight!=0.0){

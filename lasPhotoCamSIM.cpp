@@ -464,7 +464,7 @@ int main(int argc, char *argv[])
   
   gapFractions = collector->finalizePlotDomes(true);  
   char bbb[12048];
-  sprintf(bbb, "%s_%s_zenCut%d_sz%d.out", file_name_location, projchar, (int)zenCut, orast );
+  sprintf(bbb, "%s_%s_zenCut%d_sz%d.out", file_name_location, projchar, (int)(rad2deg(zenCut)), orast );
   fpLocations = fopen(file_name_location, "r"); 
   FILE *fpLocationsout = fopen(bbb, "w"); 
   char line[1024];   
