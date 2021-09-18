@@ -372,15 +372,15 @@ void printPoint(LASpoint *point){
           point->coordinates[2]);
 }
 
-void rotate(LASpoint *pt, double pitch, double roll, double yaw) {
-  double cosa = cos(yaw);
-  double sina = sin(yaw);
+void rotate(LASpoint *pt, double *ori) {
+  double cosa = cos(ori[1]);
+  double sina = sin(ori[1]);
   
-  double cosb = cos(pitch);
-  double sinb = sin(pitch);
+  double cosb = cos(ori[0]);
+  double sinb = sin(ori[0]);
   
-  double cosc = cos(roll);
-  double sinc = sin(roll);
+  double cosc = cos(ori[2]);
+  double sinc = sin(ori[2]);
   
   double Axx = cosa*cosb;
   double Axy = cosa*sinb*sinc - sina*cosc;
@@ -397,17 +397,29 @@ void rotate(LASpoint *pt, double pitch, double roll, double yaw) {
     double px = pt->coordinates[0];
     double py = pt->coordinates[1];
     double pz = pt->coordinates[2];
-    
+  
+  // fprintf(stderr, "rotat %.1f %.1f %.1f \n", 
+  //         pt->coordinates[0], 
+  //                        pt->coordinates[1], 
+  //                                       pt->coordinates[2]); 
+  
     pt->coordinates[0] = Axx*px + Axy*py + Axz*pz;
     pt->coordinates[1] = Ayx*px + Ayy*py + Ayz*pz;
     pt->coordinates[2] = Azx*px + Azy*py + Azz*pz;
-  
+    
+    // fprintf(stderr, " to  %.1f %.1f %.1f \n\n", 
+    //         pt->coordinates[0], 
+    //         pt->coordinates[1], 
+    //         pt->coordinates[2]); 
 }
 
-void original2cameracoords(LASpoint *pt, double x, double y, double z) {  
+void original2cameracoords(LASpoint *pt, double x, double y, double z, double *ori=NULL) {  
   pt->coordinates[0] = pt->coordinates[0]-x;
   pt->coordinates[1] = pt->coordinates[1]-y;
   pt->coordinates[2] = pt->coordinates[2]-z;
+  if(ori==NULL) return;
+  rotate(pt, ori);
+  
 }
 
 void cameraCoords2original(LASpoint *pt, double x, double y, double z) {  

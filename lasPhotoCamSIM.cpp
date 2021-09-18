@@ -79,9 +79,7 @@ int main(int argc, char *argv[])
   float zenCut=deg2rad(89.9);
   float maxdist=1000.0;  // maximum distance to consider when counting points... 1 km
   int orast=180;
-  double pitch=0.0;
-  double roll=0.0;
-  double yaw=0.0;
+  double *ori=NULL;
   bool toLog=false;
   bool toDb=false;
   float weight=0.0;
@@ -125,17 +123,17 @@ int main(int argc, char *argv[])
     } 
     else if (strcmp(argv[i],"-ori") == 0)
     {
-      
+      ori = new double[3];
       i++;
-      pitch=atof(argv[i]);
-      if(oriZ< -90.0||oriZ>90.0) {
+      ori[0]=atof(argv[i]);
+      if(ori[0]< -90.0||ori[0]>90.0) {
         fprintf(stderr, "ERROR:  picth angle inserted is '%s'"
                   " ONLY VALUES BETWEEN -90.0 AND 90.0 are allowed." 
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
       } ;
-      if(pitch==0.0) {
+      if(ori[0]==0.0) {
         fprintf(stderr, "WARNING:  zenith angle inserted is '%s'"
                   " this means that it will be  looking at the horizon." 
                   " - please check \n", 
@@ -143,14 +141,14 @@ int main(int argc, char *argv[])
       } 
       
       i++;
-      yaw=atof(argv[i]);
+      ori[1]=atof(argv[i]);
       
-      if(yaw==0.0) {
+      if(ori[1]==0.0) {
         fprintf(stderr, "WARNING:  roll angle inserted is '%s'." 
                   " - please check \n", 
                   argv[i]);   
       } 
-      if(yaw<0.0||yaw>360.0) {
+      if(ori[1]<0.0||ori[1]>360.0) {
         fprintf(stderr, "ERROR:  yaw angle inserted is '%s'"
                   " ONLY VALUES BETWEEN 0 AND 360 are allowed." 
                   " - please check \n", 
@@ -159,20 +157,24 @@ int main(int argc, char *argv[])
       } 
       
       i++;
-      roll=atof(argv[i]);
+      ori[2]=atof(argv[i]);
       
-      if(roll==0.0) {
+      if(ori[2]==0.0) {
         fprintf(stderr, "WARNING:  roll angle inserted is '%s'." 
                   " - please check \n", 
                   argv[i]);   
       } 
-      if(roll<-360.0||roll>360.0) {
+      if(ori[2]<-360.0||ori[2]>360.0) {
         fprintf(stderr, "ERROR:  yaw angle inserted is '%s'"
                   " ONLY VALUES BETWEEN 0 AND 360 are allowed." 
                   " - please check \n", 
                   argv[i]);  
         byebye(true, argc==1);
       } 
+      
+      for(int i; i<3; i++){
+        ori[i]=deg2rad(ori[i]);
+      }
     }
     else if (strcmp(argv[i],"-orast") == 0 )
     {
@@ -488,7 +490,7 @@ int main(int argc, char *argv[])
         lasreader->point.compute_coordinates();
         // convert to plot center reference, if distance above maxdist parameter, then continue....
         
-        original2cameracoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z);
+        original2cameracoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z, ori);
 
         polCrt = crtPlot2polar(&lasreader->point);
         if( polCrt.distance > maxdist ) continue; 
