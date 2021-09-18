@@ -152,6 +152,7 @@ class quantizer{
     
     float zenCut=90.0;
     int orast=180;
+    float radiusGrid=90.0f;
     bool toLog=false;
     bool toDb=false;
     float weight=1.0;
@@ -176,6 +177,7 @@ class quantizer{
         }
       
       this->orast=orast1;
+      this->radiusGrid = this->orast / 2.0;
       this->toLog=toLog1;
       this->toDb=toDb1;
       this->weight=weight1;
@@ -213,12 +215,13 @@ class quantizer{
           
           if (this->grids[i] )
           { 
-            for (int j = 0; j < ZENITHS; j++)
+            for (int j = 0; j < orast; j++)
             {
               this->grids[i][j] =  new float[orast];  
               memset( this->grids[i][j], 0, (orast)*sizeof(float) );
-              for(int iii=0; iii < orast; iii++){
-                this->grids[i][j][iii]=0.0f;
+              for(int k=0; k < orast; k++){
+                if( sqrt(( pow((j - radiusGrid),2.0)  + pow((k - radiusGrid),2.0)  )) > radiusGrid ) this->grids[i][j][k]= -1.0f;
+                else this->grids[i][j][k]=0.0f;
               }
             }
           }
