@@ -32,12 +32,7 @@ struct point
   bool isImage = false;
 };
 
-struct arrIdx
-{
-  int row=-1;
-  int col=-1; 
-};
-
+ 
 const double deg2rad(double x) {
   return(x * (M_PI/180.0)); 
 }
