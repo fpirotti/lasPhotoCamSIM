@@ -33,6 +33,20 @@
 
 #include "lasPhotoCamSIM.hpp"
 
+int countLines(char *fpname)
+{
+  FILE                *fp = fopen(fpname, "r");    /* or use fopen to open a file */
+  int                 c;              /* Nb. int (not char) for the EOF */
+  unsigned long       newline_count = 0;
+  
+  /* count the newline characters */
+  while ( (c=fgetc(fp)) != EOF ) {
+    if ( c == '\n' )
+      newline_count++;
+  }
+  fclose(fp);
+  return(newline_count);
+}
 
 void usage(bool wait=false)
 {
@@ -40,12 +54,17 @@ void usage(bool wait=false)
   fprintf(stderr,"lasPhotoCamSIM -i in.las -loc cameraXYZpositions.csv -verbose  -zCam 0.0 -zenithCut 89 -orast 180 -log \n"); 
   fprintf(stderr,"lasPhotoCamSIM -h\n");
   fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t- exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
+  fprintf(stderr,"-proj <eqa|eqd|str|ort|rct> - lens projections: \n\tequisolid(equal area), \n\tequidistant, \n\tstereographic, \n\torthographic and \n\trectilinear (standard perspsective)" 
+  "  \n");  
   fprintf(stderr,"-ori <0.0 180.0 0.0> \n\t- camera orientation, three angles, respectively "
             "pitch, yaw and roll/tilt angles in degrees. It is an optional input."
-            "If not set, it implies an upward looking camera. "
-            "pitch min=-90 max=90; yaw min=0 max=360; roll/tilt min=-180 max 180"
-            "E.g. 0.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. "
-            "NB pitch = 90-zenith degrees - dont confuse the -zenCut value, that is in zenith angles, with pitch angles. \n");
+            "If not set, it implies an upward looking camera (pitch=0.0). "
+            "pitch min=0 max=180 (0 is upwards, 90 is horizon, 180 is downwards); \n"
+            "yaw min=0 max=360; (0 is north, 90 is east, 180 is south) \n"
+            "roll/tilt min=-180 max 180 (0 is levelled, negative values is rotation counterclockwise)\n"
+            "E.g. 90.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. \n"
+            );
+  
   fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that are further than this value from the center of the camera. \n");
   fprintf(stderr,"-log - converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
   fprintf(stderr,"-loc <file path> \n\t- is the path to a CSV file with X Y and Z coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
@@ -65,14 +84,14 @@ void usage(bool wait=false)
 int main(int argc, char *argv[])
 {
   int i;
+  int plotN=0;
   bool verbose = false;
   double start_time = 0.0;
   
   // int dbz[ZENITH][AZIMUTHS];
   
   LASreadOpener lasreadopener;
-  FILE*  fpLocations;
-  int maxlines=100;
+  FILE*  fpLocations; 
   // FILE*  fpOutput;
   char file_name_location[256];
   float zCam=.0f;
@@ -82,14 +101,23 @@ int main(int argc, char *argv[])
   double *ori=NULL;
   bool toLog=false;
   bool toDb=false;
-  float weight=0.0;
-  int mult=1;
+  float weight=0.0; 
   int proj=0;
-  char *projchar=strdup("eqa");
-  point plotPositions[1001];
+  // char *projchar=strdup("eqa");
+  plotPoint *plotPositions=NULL;
   int nPositions=0;
-  //LASwriteOpener //laswriteopener;
+  char *field[1024];
+  int csvProjIndex =-1;
+  int csvYawIndex  =-1;
+  int csvPitchIndex=-1;
+  int csvRollIndex =-1;
+  int csvOrastIndex=-1;
+  int csvXIndex=-1;
+  int csvYIndex=-1;
+  int csvZIndex=-1;
   
+  //LASwriteOpener //laswriteopener;
+   
   if (argc == 1)
   {
     fprintf(stderr,"%s is better run in the command line\n", argv[0]);
@@ -102,15 +130,16 @@ int main(int argc, char *argv[])
     //laswriteopener.set_file_name(file_name);
   }
   else
-  {
+  { 
     lasreadopener.parse(argc, argv);
     //laswriteopener.parse(argc, argv);
   }
   
   for (i = 1; i < argc; i++)
   {
+     
     if (argv[i][0] == '\0')
-    {
+    { 
       continue;
     }
     else if (strcmp(argv[i],"-h") == 0 || strcmp(argv[i],"-help") == 0)
@@ -207,6 +236,8 @@ int main(int argc, char *argv[])
         proj=3; 
       } else if(strcmp(argv[i],"ort")==0){
         proj=4; 
+      } else if(strcmp(argv[i],"rct")==0){
+        proj=5; 
       } else {
         fprintf(stderr, "ERROR:  argument -proj '%s'"
                   " not correct. Possible values are: \n\teqa, eqd, str, ort  \n\trespectively"
@@ -216,27 +247,15 @@ int main(int argc, char *argv[])
         byebye(true, argc==1);
         
         }
-      projchar = strdup(argv[i]);
+      // projchar = strdup(argv[i]);
   
     }
     else if (strcmp(argv[i],"-maxdist") == 0 )
     {
       i++;
       maxdist=atof(argv[i]);
-      if(mult==0.0) {
+      if(maxdist==0.0) {
         fprintf(stderr, "ERROR:  argument -maxdist '%s'"
-                  " was converted to 0 which is not possible" 
-                  " - please check \n", 
-                  argv[i]);  
-        byebye(true, argc==1);
-      } 
-    }
-    else if (strcmp(argv[i],"-mult") == 0 )
-    {
-      i++;
-      mult=atoi(argv[i]);
-      if(mult==0.0) {
-        fprintf(stderr, "ERROR:  argument -mult '%s'"
                   " was converted to 0 which is not possible" 
                   " - please check \n", 
                   argv[i]);  
@@ -292,7 +311,7 @@ int main(int argc, char *argv[])
     }
     
   }
-  
+
   if ( strlen(file_name_location) == 0){ 
     fprintf(stderr, "ERROR: Must include path to a text file with table with coordinates!\n");
     usage();
@@ -300,6 +319,11 @@ int main(int argc, char *argv[])
   
   if (verbose) start_time = taketime();
   
+
+  
+  nPositions = countLines(file_name_location);
+  if (verbose) fprintf(stderr,"Number of plots: %d\n", nPositions);
+  plotPositions = new plotPoint[nPositions];
   
   fpLocations = fopen(file_name_location, "r"); 
   
@@ -318,10 +342,12 @@ int main(int argc, char *argv[])
     char *tmptokens[1024];
     char  *token, *str, *tofree ;
     
+    // read first line with header
     fgets(line, 1024, fpLocations);
  
     line[strcspn(line, "\r\n")] = 0;
-
+    
+    fprintf(stderr, "Testing line '%s'\n", line); 
     tofree = str = strdup((char*)(&line));    
     fsep = strdup("\t");  
     token = strtok(str, fsep); 
@@ -367,65 +393,191 @@ int main(int argc, char *argv[])
      
     if(strlen(token)==strlen(line) )
     {
-      fprintf(stderr, "ERROR: could not find separator of columns! Tested header '%s'\n", line); 
+      fprintf(stderr, "ERROR: could not find separator of columns! Tested header '%s'. Please check https://github.com/fpirotti/lasPhotoCamSIM/ \n", line); 
+      byebye(true, argc==1);
+    }
+    
+
+    int tok=0;
+    tofree = str = strdup((char*)(&line));   
+    token = strtok(str, fsep); 
+    while (token) {
+      (field[tok])=strdup(token);  
+      
+      if(verbose) {
+        fprintf(stderr, "Found column '%s' with separator '%s'\n", field[tok], fsep); 
+      }
+      if(strcmp(field[tok], "X")==0 || strcmp(field[tok], "x")==0) csvXIndex=tok;
+      if(strcmp(field[tok], "Y")==0 || strcmp(field[tok], "y")==0) csvYIndex=tok;
+      if(strcmp(field[tok], "Z")==0 || strcmp(field[tok], "z")==0) csvZIndex=tok;
+      if(strcmp(field[tok], "proj")==0) csvProjIndex=tok;
+      if(strcmp(field[tok], "orast")==0) csvOrastIndex=tok;
+      if(strcmp(field[tok], "yaw")==0 ){ 
+        csvYawIndex=tok;
+      }
+      if(strcmp(field[tok], "pitch")==0  ){ 
+        csvPitchIndex=tok;
+      }
+      if(strcmp(field[tok], "roll")==0  ){ 
+        csvRollIndex=tok;
+      }
+      
+      tok++;
+      if(tok==50){
+        fprintf(stderr, "ERROR: up to 50 columns supported, your table seems to have more!\n"); 
+        byebye(true, argc==1);
+      }
+      token = strtok(NULL, fsep);
+    }
+    if(tok<3){
+      fprintf(stderr, "ERROR: at least 3 columns required (X, Y and Z coordinates), with header line: your table seems to have only one or two."
+                "Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators!"
+                "If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam\n"); 
+      // byebye(true, argc==1);
+    }
+    int nori = csvPitchIndex+csvYawIndex+csvRollIndex;
+    if(nori!= -3 && (csvPitchIndex < 0 || csvYawIndex < 0 || csvRollIndex < 0) ){
+      fprintf(stderr, "ERROR: orientation of camera requires three columns,"
+                " pitch, yaw and roll - respective column index found %d %d %d - (-1 == missing) please check your CSV file !\n", 
+                csvPitchIndex,
+                csvYawIndex,
+                csvRollIndex ); 
+      byebye(true, argc==1);
+    }
+     
+    if( (csvXIndex < 0 || csvYIndex < 0 || csvZIndex < 0) ){
+      fprintf(stderr, "ERROR: X, Y and Z coordinates have not been parsed,"
+                " pitch, yaw and roll - respective column index found %d %d %d - (-1 == missing) please check your CSV file !\n", 
+                csvXIndex,
+                csvYIndex,
+                csvZIndex ); 
       byebye(true, argc==1);
     }
  
+    
   
     if(verbose) {
-      fprintf(stderr, "Reading first line %s with separator '%s' \nin '%s'  \n", line, fsep, file_name_location); 
+      fprintf(stderr, "Reading first line %s with separator '%s' in '%s'  \n", line, fsep, file_name_location); 
     }
-
+    
     while (fgets(line, 1024, fpLocations))
     { 
+      if(line[0] == '#'){
+        if(verbose){
+          fprintf(stderr, "Skipping line %s...\n", 
+                  line); 
+        } 
+        continue;
+      }
       char *token, *str, *tofree;
       line[strcspn(line, "\r\n")] = 0;
       tofree = str = strdup((char*)(&line));  // We own str's memory now. 
-      if(strlen(line)< 4){
-        fprintf(stderr, "WARNING: Line with only %d characters, skipping...\n", (int)strlen(line)); 
+      
+      if(strlen(line)< 5){
+          fprintf(stderr, "WARNING: Line with only %d characters, skipping %s...\n",
+              (int)strlen(line), 
+              line); 
       } 
-      int tok=0;
+      
+      int tok2=0;
       token = strtok(str, fsep);
       while (token) {
-        (tmptokens[tok])=strdup(token);  
-        tok++;
-        if(tok==20){
-          fprintf(stderr, "ERROR: up to 20 columns supported, your table seems to have more!\n"); 
-          byebye(true, argc==1);
-        }
+        (tmptokens[tok2])=strdup(token);  
+        tok2++;
         token = strtok(NULL, fsep);
       }
       
-      if(tok<3){
-        fprintf(stderr, "ERROR: at least 3 columns required (X, Y and Z coordinates), with header line: your table seems to have only one or two."
-                  "Check the delimiter, comma, tab, pipe, and semi-column characters are accepted as column separators!"
-                  "If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam\n"); 
+      if(tok2!=tok){
+        fprintf(stderr, "ERROR: CSV file has header with %d columns but this line parsed %d columns ! Please check your CSV file\n", 
+                tok,  tok2 ); 
         byebye(true, argc==1);
-      } 
-      plotPositions[nPositions].x =  atof( tmptokens[0] );  
-      plotPositions[nPositions].y =  atof( tmptokens[1] );  
-      plotPositions[nPositions].z =  atof( tmptokens[2] );  
-      if(plotPositions[nPositions].x==.0){
-        fprintf(stderr, "WARNING: read coordinate X with 0.0 value... make sure it is correct \n"); 
-      }
-      if(plotPositions[nPositions].y==.0){
-        fprintf(stderr, "WARNING: read coordinate Y with 0.0 value... make sure it is correct \n"); 
-      }
-      if(plotPositions[nPositions].z==.0){
-        fprintf(stderr, "WARNING: read coordinate Z with 0.0 value... make sure it is correct \n"); 
-      }
-      plotPositions[nPositions].z = plotPositions[nPositions].z + zCam;
-      free(tofree);
-        
-      if(nPositions>(maxlines-1)){
-        fprintf(stderr, "ERROR: More than 1000 rows with locations, please split your table with plot location coordinates in less than 1000 plots per file.\n"); 
-        byebye(true, argc==1); 
       }
       
-      nPositions++; 
+
+      plotPositions[plotN].x =  atof( tmptokens[csvXIndex] );  
+      plotPositions[plotN].y =  atof( tmptokens[csvYIndex] );  
+      plotPositions[plotN].z =  atof( tmptokens[csvZIndex] );  
+      if(plotPositions[plotN].x==.0){
+        fprintf(stderr, "WARNING: read coordinate X with 0.0 value... make sure it is correct \n"); 
+      }
+      if(plotPositions[plotN].y==.0){
+        fprintf(stderr, "WARNING: read coordinate Y with 0.0 value... make sure it is correct \n"); 
+      }
+      if(plotPositions[plotN].z==.0){
+        fprintf(stderr, "WARNING: read coordinate Z with 0.0 value... make sure it is correct \n"); 
+      }
+      plotPositions[plotN].z = plotPositions[plotN].z + zCam;
+      
+      if(csvPitchIndex == -1 && ori!=NULL){ 
+        plotPositions[plotN].ori = new double[3]; 
+        plotPositions[plotN].ori[0]  =   ori[0];        
+        plotPositions[plotN].ori[1]  =   ori[1];       
+        plotPositions[plotN].ori[2]  =   ori[2];   
+      }  
+      
+      if(csvPitchIndex > -1){
+        plotPositions[plotN].ori = new double[3];
+        
+        plotPositions[plotN].ori[0]  =  atof( tmptokens[csvPitchIndex] );  
+        if(verbose && plotPositions[plotN].ori[0]==.0){
+          fprintf(stderr, "WARNING: read pitch angle with 0.0 degrees value... make sure it is correct \n"); 
+        }
+        plotPositions[plotN].ori[0]  = deg2rad(plotPositions[plotN].ori[0] );
+        
+        plotPositions[plotN].ori[1]  =  atof( tmptokens[csvYawIndex] );  
+        if(verbose && plotPositions[plotN].ori[1]==.0){
+          fprintf(stderr, "WARNING: read yaw/azimuth angle with 0.0 degrees value... make sure it is correct \n"); 
+        }
+        plotPositions[plotN].ori[1]  = deg2rad(plotPositions[plotN].ori[1] );
+        
+        plotPositions[plotN].ori[2]  =  atof( tmptokens[csvRollIndex] );
+        if(verbose && plotPositions[plotN].ori[2]==.0){
+          fprintf(stderr, "WARNING: read roll/tilt angle with 0.0 degrees value... make sure it is correct \n"); 
+        }
+        plotPositions[plotN].ori[2]  = deg2rad(plotPositions[plotN].ori[2] );
+         
+      } 
+      
+      if( csvOrastIndex  > -1 ){
+        plotPositions[plotN].orast  =  atoi( tmptokens[csvOrastIndex] );
+        if(verbose && plotPositions[plotN].orast==0){
+          fprintf(stderr, "ERROR: parsed output raster size to 0 pixels check CSV file \n"); 
+          byebye(true, argc==1);
+        }
+      } else {
+        plotPositions[plotN].orast = orast;
+      }
+      
+      if( csvProjIndex  > -1 ){
+        int projj=-1;
+        if(strcmp(tmptokens[csvProjIndex],"str")==0){
+          projj=1;
+        } else if(strcmp(tmptokens[csvProjIndex], "eqa")==0){ 
+          projj=2;
+        } else if(strcmp(tmptokens[csvProjIndex],"eqd")==0){
+          projj=3; 
+        } else if(strcmp(tmptokens[csvProjIndex],"ort")==0){
+          projj=4; 
+        } else if(strcmp(tmptokens[csvProjIndex],"rct")==0){
+          projj=5; 
+        }
+        if(projj < 0){
+          fprintf(stderr, "ERROR: cannot parse lens projection '%s' in 'proj' column CSV file. Please make sure it is either 'eqd', 'eqa', 'str', 'ort' or 'rct' - see help with -h flag \n",
+                  tmptokens[csvProjIndex] ); 
+          byebye(true, argc==1);
+        }
+        
+        plotPositions[plotN].proj = projj;
+      } else {
+        plotPositions[plotN].proj = proj;
+      }
+      free(tofree);
+ 
+      
+      plotN++; 
        
     }
-    if(verbose)  fprintf(stderr, "Read %d plot positions...\n", nPositions);
+    if(verbose)  fprintf(stderr, "Read %d plot positions...\n", plotN);
   }
   
   if(verbose) fprintf(stderr, "Finished reading '%s'  \n", file_name_location); 
@@ -441,9 +593,9 @@ int main(int argc, char *argv[])
   
    
   
-  quantizer *collector = new quantizer( nPositions, plotPositions, 
-                                       zenCut,  orast, toLog,  toDb, weight,
-                                       file_name_location,  projchar ); 
+  quantizer *collector = new quantizer( plotN, plotPositions, 
+                                       zenCut,   toLog,  toDb, weight,
+                                       file_name_location ); 
   
   // if(verbose) fprintf(stderr,"Reading %d LAS/LAZ files sampled on %d plots\n", nPositions); 
   polarCoordinate polCrt;
@@ -484,19 +636,19 @@ int main(int argc, char *argv[])
       //   continue;  
       // }
       
-      for(int i=0; i<nPositions; ++i){
+      for(int i=0; i<plotN; ++i){
         // grab coordinates 
          
         lasreader->point.compute_coordinates();
         // convert to plot center reference, if distance above maxdist parameter, then continue....
         
-        original2cameracoords(&lasreader->point, plotPositions[i].x, plotPositions[i].y, plotPositions[i].z, ori);
+        original2cameracoords(&lasreader->point, plotPositions[i]);
 
         polCrt = crtPlot2polar(&lasreader->point);
         if( polCrt.distance > maxdist ) continue; 
         
         // fprintf(stderr, "\n 1111.aaaa%f\n " , polCrt.planar.x );
-        camera2image( &polCrt, proj, 1.0);
+        camera2image( &polCrt, plotPositions[i].proj, 1.0);
         
         // point is below cutoff angle  
         if( polCrt.zenith > zenCut ) continue;  
@@ -526,7 +678,7 @@ int main(int argc, char *argv[])
   
   gapFractions = collector->finalizePlotDomes(true);  
   char bbb[12048];
-  sprintf(bbb, "%s_%s_zenCut%d_sz%d.out", file_name_location, projchar, (int)(rad2deg(zenCut)), orast );
+  sprintf(bbb, "%s_zenCut%d.out", file_name_location,   (int)(rad2deg(zenCut))  );
   fpLocations = fopen(file_name_location, "r"); 
   FILE *fpLocationsout = fopen(bbb, "w"); 
   char line[1024];   
@@ -538,6 +690,13 @@ int main(int argc, char *argv[])
   int c=0;
   while (fgets(line, 1024, fpLocations))
   {   
+    if(line[0] == '#'){
+      if(verbose){
+        fprintf(stderr, "Skipping line %s...\n", 
+                line); 
+      } 
+      continue;
+    }
     line[strcspn(line, "\r\n")] = 0;
     sprintf(lineout, "%s%s%f\n", line, fsep, gapFractions[c]); 
     fputs(lineout,  fpLocationsout);

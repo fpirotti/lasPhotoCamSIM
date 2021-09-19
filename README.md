@@ -66,9 +66,14 @@ This tools basically estimates how much light arrives at a certain spot/plot., o
 
 ### PARAMETERS
 
-**-loc \<file path\>**: is the path to a CSV file with X Y and Z coordinates of camera locations - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators. If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam
+**-loc \<file path\>**: is the path to a CSV file - with header - with the following information:  
+ - X Y and Z: coordinates of camera locations (mandatory);  
+ - pitch, yaw, roll: orientation of camera; (see **-ori** for more info.) This overrides the -ori command-line parameters if present.   
+ - proj: also overrides the **-proj** parameter (see **-proj** for more info.). I.e. you can set for each camera the lens projections to use.
+ - orast: also overrides the **-orast** parameter (see **-orast** for more info.) - each camera can project to a specific size of grid - for now only square grids are supported.  
+ - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators. If you don't care about camera Z coordinate (e.g. if your cloud is normalized to ground) and want a fixed value, you can put '0' for the third column and fix the value using -zCam
 
-Example: **-loc cameras.csv** cameras.csv with the following contents:   
+Example 1: **-loc cameras.csv** cameras.csv with the following contents:   
   
     X|Y|Z
     279890|5718602|0
@@ -86,6 +91,19 @@ After running, the ouput will create a file in the same directory **cameras.csv.
     279880|5718759|0|12.45
     279963|5718737|0|36.8
     283261|5718290|0|12.4
+
+Example 2: **-loc cameras.csv** cameras.csv with orientation , lens projection, setting output grid size to 1000x1000 pixels:   
+  
+    X|Y|Z|pitch|yaw|roll|proj|orast
+    279890|5718602|0|45.0|0.0|0.0|eqa|1000
+    279955|5718681|0|45.0|90.0|0.0|eqa|1000
+    279880|5718759|0|45.0|180.0|0.0|eqa|1000
+    279963|5718737|0|45.0|270.0|0.0|eqa|1000
+    283261|5718290|0|75.0|0.0|0.0|eqa|1000
+
+
+After running, the ouput will create a file in the same directory **cameras.csv.out** with appended gap fraction values and ESRI ASCII grids with 1000x1000 pixels:
+ 
 
  
 **-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided. The name of the output files will be: Plot_\<Number in 00X format\>\<-log or -db if trasformation was used\>\<-ort, -eqd -eqa -str depending on the projection chosen\>.asc 

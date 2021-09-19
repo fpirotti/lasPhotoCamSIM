@@ -24,12 +24,27 @@
 // #include "tiff.h"
 // #include "tiffio.h"
  
+
 struct point
 {
   double x=.0;
   double y=.0;
   double z=.0;
   bool isImage = false;
+};
+
+struct plotPoint
+{
+  double x=.0;
+  double y=.0;
+  double z=.0; 
+  double *ori=NULL;
+  // double yaw=.0;
+  // double roll=.0;
+  // double pitch=.0; 
+  float zencut=90.0; 
+  int orast=180; 
+  int proj=0;
 };
 
  
@@ -57,8 +72,8 @@ void camera2imageStr(polarCoordinate *pt, double c=1.0 ) {
   
   if(pt->distance2d==0) {x=.0; y=.0;} 
   else { 
-    x = (tan(pt->zenith/2.0) * 2.0 * cos(pt->azimuth))/ tan(M_PI/4.0); 
-    y = (tan(pt->zenith/2.0) * 2.0 * sin(pt->azimuth))/ tan(M_PI/4.0); 
+    x = (tan(pt->zenith/2.0) * 2.0 * cos(pt->azimuth))/ (tan(M_PI/4.0)*2.0); 
+    y = (tan(pt->zenith/2.0) * 2.0 * sin(pt->azimuth))/ (tan(M_PI/4.0)*2.0); 
   }
   
   pt->planar.x = x;  
@@ -122,6 +137,7 @@ void camera2image(polarCoordinate *pt, int projection, double c=1.0) {
   else if(projection==2) camera2imageEqa(pt,c);
   else if(projection==3) camera2imageEqd(pt,c);
   else if(projection==4) camera2imageOrt(pt,c);
+  else if(projection==5) camera2imageRect(pt,c);
   else {
     camera2imageEqa(pt,c);
   }
@@ -147,25 +163,25 @@ class quantizer{
     bool toLog=false;
     bool toDb=false;
     float weight=1.0;
-    point *plotCenters;
+    plotPoint *plotCenters;
     float *plotGapFraction; 
-    char *basename;
-    char *projchar;
+    char *basename; 
+    char projchar[6][4] = {"non", "str", "eqa", "eqd", "ort", "rct" };
     
-    quantizer(  int plots, point *plotPositions,  
+    quantizer(  int plots, plotPoint *plotPositions,  
               float zenCut1=(M_PI/2.0), 
-              int orast1=180, bool toLog1=false,  bool toDb1=false, 
-              float weight1=1.0,  char *basename1=NULL, char *projchar1=NULL ) { 
+              bool toLog1=false,  bool toDb1=false, 
+              float weight1=1.0,  char *basename1=NULL ) { 
        
       this->plotGapFraction = new float[plots];  
        
-      if(projchar1==NULL){
-        this->projchar=strdup("eqa");
-        fprintf(stderr, "Projection null!!!!!.\n");
-        
-      } else {
-        this->projchar =strdup(projchar1);  
-      }
+      // if(projchar1==NULL){
+      //   this->projchar=strdup("eqa");
+      //   fprintf(stderr, "Projection null!!!!!.\n");
+      //   
+      // } else {
+      //   this->projchar =strdup(projchar1);  
+      // }
       
       if(basename1==NULL){
         this->basename=strdup("lasPhotoCamSIMoutputCSV");
@@ -174,8 +190,7 @@ class quantizer{
       }
       
       this->zenCut=zenCut1;
-      this->orast=orast1;
-      this->radiusGrid = (this->orast / 2.0) * sin(this->zenCut) ;
+      // this->plotCenters[plotn].orast=orast1;
       this->toLog=toLog1;
       this->toDb=toDb1;
       this->weight=weight1;
@@ -197,7 +212,7 @@ class quantizer{
                 "\n", plotCenters[0].x, plotCenters[0].y, 
                 this->zenCut, 
                 rad2deg(this->zenCut),
-                this->orast);
+                plotCenters[0].orast);
       
       this->grids = (float***)malloc(sizeof( *grids)  * plots);
 
@@ -207,16 +222,18 @@ class quantizer{
         for (i = 0; i < plots; i++)
         {
           this->plotGapFraction[i]=0.0;
-          this->grids[i] = (float**)malloc(sizeof(*this->grids[i])  * orast );   
+          this->grids[i] = (float**)malloc(sizeof(*this->grids[i])  * this->plotCenters[i].orast );   
            
-          
+           
+          radiusGrid = (this->plotCenters[i].orast / 2.0) * sin(this->zenCut) ;
           if (this->grids[i] )
           { 
-            for (int j = 0; j < orast; j++)
+            for (int j = 0; j < this->plotCenters[i].orast; j++)
             {
-              this->grids[i][j] =  new float[orast];  
-              memset( this->grids[i][j], 0, (orast)*sizeof(float) );
-              for(int k=0; k < orast; k++){
+              this->grids[i][j] =  new float[this->plotCenters[i].orast];  
+              memset( this->grids[i][j], 0, (this->plotCenters[i].orast)*sizeof(float) );
+              
+              for(int k=0; k < this->plotCenters[i].orast; k++){
                 if( sqrt(( pow((j - radiusGrid),2.0)  + pow((k - radiusGrid),2.0)  )) > radiusGrid ) this->grids[i][j][k]= -1.0f;
                 else this->grids[i][j][k]=0.0f;
               }
@@ -230,20 +247,22 @@ class quantizer{
      
      if(!pt->planar.isImage) return;
      int x, y;
-     x = (int)floor(((double)this->orast * pt->planar.x + (double)this->orast)/2.0);
-     y = (int)floor(((double)this->orast * pt->planar.y + (double)this->orast)/2.0);
-     // if(x > (this->orast-1)) x--;
-     // if(y==this->orast) y--;
+     x = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.x + (double)this->plotCenters[plotn].orast)/2.0);
+     y = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast)/2.0);
+     // if(x > (this->plotCenters[plotn].orast-1)) x--;
+     // if(y==this->plotCenters[plotn].orast) y--;
      
-     if(x < 0 || x >= this->orast || y < 0 || y >= this->orast )
-       fprintf(stderr, "\n az=%f zen=%f ------- %f  \t  \n%.2f  %f \n%.2f  %f -- \n%d\t%d \t%f \n"  ,
-               pt->azimuth, pt->zenith,
-             (double)this->orast,
-             this->orast * pt->planar.x,
-             this->orast * pt->planar.y,
+     if(x < 0 || x >= this->plotCenters[plotn].orast || y < 0 || y >= this->plotCenters[plotn].orast )
+       fprintf(stderr, "\n proj=%s \n az=%f zen=%f ------- %f  \t  \n%.2f  %f \n%.2f  %f -- \n"
+                 "x=%d\ty=%d \n"
+                 "%f \n"  ,
+              projchar[ this->plotCenters[plotn].proj ], pt->azimuth, pt->zenith,
+             (double)this->plotCenters[plotn].orast,
+             this->plotCenters[plotn].orast * pt->planar.x,
+             this->plotCenters[plotn].orast * pt->planar.y,
              pt->planar.x,
              pt->planar.y,
-             x, y, ((double)this->orast * pt->planar.y + (double)this->orast) );
+             x, y, ((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast) );
      // if(x < this->maxx)    this->maxx = x;
      // if(y < this->maxy)    this->maxy = y;
        
@@ -279,13 +298,13 @@ class quantizer{
    
    
    if(this->toDb){
-    sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_dB", basename,  (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
+    sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_dB", basename,  (plotn+1), projchar[ this->plotCenters[plotn].proj ], (int)(rad2deg(zenCut)), this->plotCenters[plotn].orast );
    } 
    else if(this->toLog){
-     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_log10", basename, (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d_log10", basename, (plotn+1), projchar[  this->plotCenters[plotn].proj ], (int)(rad2deg(zenCut)), this->plotCenters[plotn].orast );
    }
    else {
-     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d", basename, (plotn+1), projchar, (int)(rad2deg(zenCut)), orast );
+     sprintf (outfilenamet,  "%s.plot%03d_%s_zenCut%d_sz%d", basename, (plotn+1), projchar[  this->plotCenters[plotn].proj ], (int)(rad2deg(zenCut)), this->plotCenters[plotn].orast );
    }
    
    if(this->weight!=0.0){
@@ -294,7 +313,11 @@ class quantizer{
      sprintf(outfilename, "%s.asc", outfilenamet);
    }
      
-     
+   if(verbose) {
+     fprintf(stderr, "Doing image for plot %d\nFilename=%s\n", plotn, outfilename);
+     if(this->toDb) fprintf(stderr, "Converting to dB ....\n");
+     if(this->toLog) fprintf(stderr, "Converting to log10 ....\n");
+   }
    FILE *out= fopen(outfilename, "w");
    
    fprintf(out, "ncols         %d \n"
@@ -302,21 +325,21 @@ class quantizer{
              "xllcorner     %f\n"
              "yllcorner     %f\n"
              "cellsize      %f \n"
-             "NODATA_value  -1\n", this->orast , this->orast, 
-             (plotCenters[plotn].x - (float)this->orast/( (float)this->orast/90.0) ), 
-             (plotCenters[plotn].y - (float)this->orast/( (float)this->orast/90.0) ),
-             (180.0/(float)this->orast) );
+             "NODATA_value  -1\n", this->plotCenters[plotn].orast , this->plotCenters[plotn].orast, 
+             (plotCenters[plotn].x - (float)this->plotCenters[plotn].orast/( (float)this->plotCenters[plotn].orast/90.0) ), 
+             (plotCenters[plotn].y - (float)this->plotCenters[plotn].orast/( (float)this->plotCenters[plotn].orast/90.0) ),
+             (180.0/(float)this->plotCenters[plotn].orast) );
    
    
    
 
    int hits=0;
    int total=0;
-   for (int row = 0; row < this->orast; row++)
+   for (int row = 0; row < this->plotCenters[plotn].orast; row++)
    {   
-     for (int col = 0; col < this->orast; col++){
+     for (int col = 0; col < this->plotCenters[plotn].orast; col++){
        
-       float v=((float)(image[row][col])) * this->orast; 
+       float v=((float)(image[row][col])) * this->plotCenters[plotn].orast; 
         
        // fprintf(stderr, "\n ------- %.2f   "  , v);
        
@@ -413,12 +436,12 @@ void rotate(LASpoint *pt, double *ori) {
     //         pt->coordinates[2]); 
 }
 
-void original2cameracoords(LASpoint *pt, double x, double y, double z, double *ori=NULL) {  
-  pt->coordinates[0] = pt->coordinates[0]-x;
-  pt->coordinates[1] = pt->coordinates[1]-y;
-  pt->coordinates[2] = pt->coordinates[2]-z;
-  if(ori==NULL) return;
-  rotate(pt, ori);
+void original2cameracoords(LASpoint *pt, plotPoint camera) {  
+  pt->coordinates[0] = pt->coordinates[0]- camera.x;
+  pt->coordinates[1] = pt->coordinates[1]- camera.y;
+  pt->coordinates[2] = pt->coordinates[2]- camera.z;
+  if(camera.ori==NULL) return;
+  rotate(pt, camera.ori);
   
 }
 
