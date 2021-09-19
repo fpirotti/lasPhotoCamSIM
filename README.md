@@ -1,8 +1,10 @@
 # lasPhotoCamSIM
 
 
-Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with 5  lens projection models: equiangular, equidistant, stereographic,  orthographic and rectilinear(standard perspective). 
+Provided with a point cloud, it simulates a photo as if  taken from a camera in  the point cloud. 
+A text file is used to provide camera locations and orientations, as well as other per-camera parameters. How much light arrives to the lens is calculated by projecting points on a grid with 5  lens projection models: equiangular, equidistant, stereographic,  orthographic and rectilinear(standard perspective). 
 
+It can be used for several purposes, ranging the fields of  ecology/forestry, urban light pollution, etc...
 
 <img src="./img1.jpg" />
 Figure 1. Example over a UAV lidar flight with 5000 points per square meter.
