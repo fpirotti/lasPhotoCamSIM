@@ -117,16 +117,16 @@ void camera2imageRect(polarCoordinate *pt, double c=1.0, double fov=M_PI/4) {
   double x, y;
   
   if(pt->distance2d==0) {x=.0; y=.0;} 
-  else if(pt->zenith > fov ) { 
-    pt->planar.isImage=false;  
-    } 
-  else  { 
+  // else if(pt->zenith > fov ) { 
+  //   pt->planar.isImage=false;  
+  //   } 
+  // else  { 
     x = tan(pt->zenith)  * cos(pt->azimuth); 
     y = tan(pt->zenith)  * sin(pt->azimuth); 
     pt->planar.x = x;  
     pt->planar.y = y;  
     pt->planar.isImage=true; 
-  }
+  // }
   
 }
 
@@ -243,31 +243,33 @@ class quantizer{
       }
     }; 
       
-   void image2grid(int plotn, polarCoordinate *pt,    bool verbose=false) {
-     
-     if(!pt->planar.isImage) return;
-     int x, y;
-     x = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.x + (double)this->plotCenters[plotn].orast)/2.0);
-     y = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast)/2.0);
-     // if(x > (this->plotCenters[plotn].orast-1)) x--;
-     // if(y==this->plotCenters[plotn].orast) y--;
-     
-     if(x < 0 || x >= this->plotCenters[plotn].orast || y < 0 || y >= this->plotCenters[plotn].orast )
-       fprintf(stderr, "\n proj=%s \n az=%f zen=%f ------- %f  \t  \n%.2f  %f \n%.2f  %f -- \n"
-                 "x=%d\ty=%d \n"
-                 "%f \n"  ,
-              projchar[ this->plotCenters[plotn].proj ], pt->azimuth, pt->zenith,
-             (double)this->plotCenters[plotn].orast,
-             this->plotCenters[plotn].orast * pt->planar.x,
-             this->plotCenters[plotn].orast * pt->planar.y,
-             pt->planar.x,
-             pt->planar.y,
-             x, y, ((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast) );
-     // if(x < this->maxx)    this->maxx = x;
-     // if(y < this->maxy)    this->maxy = y;
-       
-     this->grids[plotn][y][x] = this->grids[plotn][y][x] + (1.0/pow((pt->distance+0.05),weight));
-   }
+      void image2grid(int plotn, polarCoordinate *pt,    bool verbose=false) {
+        
+        if(!pt->planar.isImage) return;
+        int x, y;
+        x = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.x + (double)this->plotCenters[plotn].orast)/2.0);
+        y = (int)floor(((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast)/2.0);
+        // if(x > (this->plotCenters[plotn].orast-1)) x--;
+        // if(y==this->plotCenters[plotn].orast) y--;
+        
+        if(x < 0 || x >= this->plotCenters[plotn].orast || y < 0 || y >= this->plotCenters[plotn].orast ){
+          if(verbose)        fprintf(stderr, "\n proj=%s \n az=%f zen=%f ------- %f  \t  \n%.2f  %f \n%.2f  %f -- \n"
+                                       "x=%d\ty=%d \n"
+                                       "%f \n"  ,
+                                       projchar[ this->plotCenters[plotn].proj ], pt->azimuth, pt->zenith,
+                                       (double)this->plotCenters[plotn].orast,
+                                       this->plotCenters[plotn].orast * pt->planar.x,
+                                       this->plotCenters[plotn].orast * pt->planar.y,
+                                       pt->planar.x,
+                                       pt->planar.y,
+                                       x, y, ((double)this->plotCenters[plotn].orast * pt->planar.y + (double)this->plotCenters[plotn].orast) );
+          
+        } else {
+          
+          this->grids[plotn][y][x] = this->grids[plotn][y][x] + (1.0/pow((pt->distance+0.05),weight));
+        }
+        
+      }
    
   
    float* finalizePlotDomes(bool verbose=false) {
@@ -396,14 +398,14 @@ void printPoint(LASpoint *point){
 }
 
 void rotate(LASpoint *pt, double *ori) {
-  double cosa = cos(ori[1]);
-  double sina = sin(ori[1]);
+  double cosa = cos(ori[2]);
+  double sina = sin(ori[2]);
   
-  double cosb = cos(ori[0]);
-  double sinb = sin(ori[0]);
+  double cosb = cos(ori[1]);
+  double sinb = sin(ori[1]);
   
-  double cosc = cos(ori[2]);
-  double sinc = sin(ori[2]);
+  double cosc = cos(ori[0]);
+  double sinc = sin(ori[0]);
   
   double Axx = cosa*cosb;
   double Axy = cosa*sinb*sinc - sina*cosc;
