@@ -164,6 +164,6 @@ Contact <a href=mailto:francesco.pirotti@unipd.it>AUTHOR</a> or visit  [https://
 for more info and links to social-media, [Facebook](https://www.facebook.com/cirgeo.unipd) or [Instagram](https://www.instagram.com/cirgeo.unipd/). 
 
 
-## Ooutput examples
+## Output examples
 <img src="./img2.jpg" />
 Figure 1. Fisheye vs normal perspective camera over canopies sampled with high density laser scanning.
