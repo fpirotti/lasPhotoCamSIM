@@ -1,17 +1,15 @@
 # lasPhotoCamSIM
 
 
-Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with four mathematical hemispherical lens models: equiangular, equidistant, stereographic, and orthographic. **For now only upward looking hemispherical photography is implemented**.
+Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with four mathematical hemispherical lens models: equiangular, equidistant, stereographic,  orthographic and rectilinear(perspective). 
 
 
 <img src="./img1.jpg" />
 Figure 1. Example over a UAV lidar flight with 5000 points per square meter.
 
+See more examples at the bottom of this page [More examples](#More_examples)  .
 
-<img src="./img2.jpg" />
-Figure 1. Example over a UAV lidar flight with 50 points per square meter.
-
-See paper XXXX
+ 
 
 ## Installation instruction
 
@@ -164,3 +162,8 @@ VARCITIES - visionary solutions... In this context the light transmission in a g
 
 Contact <a href=mailto:francesco.pirotti@unipd.it>AUTHOR</a> or visit  [https://www.cirgeo.unipd.it](https://www.cirgeo.unipd.it)
 for more info and links to social-media, [Facebook](https://www.facebook.com/cirgeo.unipd) or [Instagram](https://www.instagram.com/cirgeo.unipd/). 
+
+
+## More examples
+<img src="./img2.jpg" />
+Figure 1. Fisheye vs normal perspective camera over canopies sampled with high density laser scanning.
