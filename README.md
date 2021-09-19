@@ -1,7 +1,7 @@
 # lasPhotoCamSIM
 
 
-Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with four mathematical hemispherical lens models: equiangular, equidistant, stereographic,  orthographic and rectilinear(perspective). 
+Provides a simulated image as if it was taken using a camera inside a point cloud. One or several camera locations can be provided using a text file. How much light arrives to the lens is calculated by projecting points on a grid with 5  lens projection models: equiangular, equidistant, stereographic,  orthographic and rectilinear(standard perspective). 
 
 
 <img src="./img1.jpg" />
