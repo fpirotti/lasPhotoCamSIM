@@ -234,7 +234,7 @@ class quantizer{
               memset( this->grids[i][j], 0, (this->plotCenters[i].orast)*sizeof(float) );
               
               for(int k=0; k < this->plotCenters[i].orast; k++){
-                if( sqrt(( pow((j - radiusGrid),2.0)  + pow((k - radiusGrid),2.0)  )) > radiusGrid ) this->grids[i][j][k]= -1.0f;
+                if(this->plotCenters[i].proj!=5 && sqrt(( pow((j - radiusGrid),2.0)  + pow((k - radiusGrid),2.0)  )) > radiusGrid ) this->grids[i][j][k]= -1.0f;
                 else this->grids[i][j][k]=0.0f;
               }
             }

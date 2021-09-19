@@ -52,26 +52,51 @@ void usage(bool wait=false)
 {
   fprintf(stderr,"usage:\n");
   fprintf(stderr,"lasPhotoCamSIM -i in.las -loc cameraXYZpositions.csv -verbose  -zCam 0.0 -zenithCut 89 -orast 180 -log \n"); 
-  fprintf(stderr,"lasPhotoCamSIM -h\n");
-  fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t- exports a square grid in ESRI GRID ASCII format. Pixels represent the point counts. Size of grid  \n");
-  fprintf(stderr,"-proj <eqa|eqd|str|ort|rct> - lens projections: \n\tequisolid(equal area), \n\tequidistant, \n\tstereographic, \n\torthographic and \n\trectilinear (standard perspsective)" 
-  "  \n");  
+  fprintf(stderr,"lasPhotoCamSIM -h\n\nPARAMETERS:\n");
+  
+  fprintf(stderr,"-orast <size of square in pizels> default=180 \n\t"
+            "- exports a square grid in ESRI GRID ASCII format. Pixels "
+            "represent the point counts. Size of grid  \n\n");
+  
+  fprintf(stderr,"-proj <eqa|eqd|str|ort|rct> - lens projections:"
+            " \n\tequisolid(equal area), \n\tequidistant, \n\tstereographic,"
+            " \n\torthographic and \n\trectilinear (standard perspsective)\n\n"  );  
   fprintf(stderr,"-ori <0.0 180.0 0.0> \n\t- camera orientation, three angles, respectively "
             "pitch, yaw and roll/tilt angles in degrees. It is an optional input."
             "If not set, it implies an upward looking camera (pitch=0.0). "
             "pitch min=0 max=180 (0 is upwards, 90 is horizon, 180 is downwards); \n"
             "yaw min=0 max=360; (0 is north, 90 is east, 180 is south) \n"
             "roll/tilt min=-180 max 180 (0 is levelled, negative values is rotation counterclockwise)\n"
-            "E.g. 90.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. \n"
+            "E.g. 90.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted. \n\n"
             );
   
-  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that are further than this value from the center of the camera. \n");
-  fprintf(stderr,"-log - converts pixel values, which represent point counts, to natural log scale (-orast must be also present). \n");
-  fprintf(stderr,"-loc <file path> \n\t- is the path to a CSV file with X Y and Z coordinates - with header - other columns can be present and will be saved in output. Comma, tab, pipe, space, column and semi-column characters are accepted as column separators.\n");
-  fprintf(stderr,"-zCam <height value in meters> default=0.0m \n\t- height of camera - NB this is in absolute height with respect to the point cloud, so if your point cloud is normalized (e.g. a canopy height model) then 1.3m will be 1.3m from the ground.  \n");
-  fprintf(stderr,"-zenCut <Zenith angle in degrees> default=89° \n\t- At 90° the points will be at the horizon, potentially counting million of \n\tpoints: a smaller Zenith angle will ignore points lower than that angle.\n");
-  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage and, if '-orast' parameter is present, raster images 180x180 pixels in ESRI GRID ASCII format (https://en.wikipedia.org/wiki/Esri_grid).  \n");
-  fprintf(stderr,"Version 0.95.1: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
+  fprintf(stderr,"-weight <power value>: default=0.0 power of inverse distance weight. "
+  "Each point that intersects a 1°x1° sector in the dome will be positioned"
+  " at a certain distance that can be used to weight the value of the point. "
+  "No weight=each point weights 1, i.e. if 10 points are in the sector, "
+  "that sector will be occluded by 10 points. If weight=2 (-weight 2.0) is"
+  " provided, each point will add a value of 1.0 * 1.0/pow(distance, 2.0) to the total.  "
+  "Default value is 0 because no weight is applied\n\n");
+  
+  fprintf(stderr,"-maxdist <distance in meters> default=1000.0 \n\t- will ignore any points that"
+            " are further than this value from the center of the camera. \n\n");
+  fprintf(stderr,"-log - converts pixel values, which represent point counts,"
+            " to natural log scale (-orast must be also present). \n\n");
+  fprintf(stderr,"-loc <file path> \n\t- is the path to a CSV file with X Y and Z coordinates"
+            " - with header - other columns can be present and will be saved in output."
+            " Comma, tab, pipe, space, column and semi-column characters are accepted"
+            " as column separators.\n\n");
+  fprintf(stderr,"-zCam <height value in meters> default=0.0m \n\t- "
+            "height of camera - NB this is in absolute height with respect to the"
+            " point cloud, so if your point cloud is normalized (e.g. a canopy height model)"
+            " then 1.3m will be 1.3m from the ground.  \n\n");
+  fprintf(stderr,"-zenCut <Zenith angle in degrees> default=89° \n\t- "
+            "At 90° the points will be at the horizon, potentially counting million of"
+            " \n\tpoints: a smaller Zenith angle will ignore points lower than that angle.\n\n");
+  fprintf(stderr,"Output: the CSV file with an extra added column with Gap Fraction in percentage "
+            "and, if '-orast' parameter is present, raster images 180x180 pixels in ESRI GRID ASCII"
+            " format (https://en.wikipedia.org/wiki/Esri_grid).  \n\n");
+  fprintf(stderr,"Version 0.95.2: for feedback contact author: Francesco Pirotti, francesco.pirotti@unipd.it  \n");
   if (wait)
   {
     fprintf(stderr,"<press ENTER>\n");
