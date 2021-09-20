@@ -9,7 +9,7 @@ It can be used for several purposes, ranging the fields of  ecology/forestry, ur
 <img src="./img1.jpg" />
 Figure 1. Example over a UAV lidar flight with 5000 points per square meter.
 
-See   [ouput examples](#ouput-examples)  at the bottom of this page .
+See   [ouput examples](#output-examples)  at the bottom of this page .
 
  
 
