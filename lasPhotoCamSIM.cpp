@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
   bool toLog=false;
   bool toDb=false;
   float weight=0.0; 
-  int proj=0;
+  int proj=2;
   // char *projchar=strdup("eqa");
   plotPoint *plotPositions=NULL;
   int nPositions=0;
@@ -415,7 +415,15 @@ int main(int argc, char *argv[])
       }
       token = strtok(str, fsep); 
     }  
-     
+    
+    if(strlen(token)==strlen(line) ) {  
+      tofree = str = strdup((char*)(&line));   
+      fsep = strdup(" "); 
+      if(verbose) {
+        fprintf(stderr, "Testing separator ' ' (space)\n"); 
+      }
+      token = strtok(str, fsep); 
+    }  
     if(strlen(token)==strlen(line) )
     {
       fprintf(stderr, "ERROR: could not find separator of columns! Tested header '%s'. Please check https://github.com/fpirotti/lasPhotoCamSIM/ \n", line); 
