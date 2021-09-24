@@ -709,7 +709,7 @@ int main(int argc, char *argv[])
   fprintf(stderr, "\b\b\b100%%\n\nFINALIZING.....\n" );
   float *gapFractions;
   
-  gapFractions = collector->finalizePlotDomes(true);  
+  gapFractions = collector->finalizePlotDomes(verbose);  
   char bbb[12048];
   sprintf(bbb, "%s_zenCut%d.out", file_name_location,   (int)(rad2deg(zenCut))  );
   fpLocations = fopen(file_name_location, "r"); 
