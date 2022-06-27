@@ -109,12 +109,22 @@ After running, the ouput will create a file in the same directory **cameras.csv.
 **-orast: \<pixel size of square grid\>:** *default=180*  exports reprojected shperical coordinates to a planar grid ESRI GRID ASCII format. Pixels represent the point counts.  The cell values are the counts of points, scaled if one of  *-log* or *-db* flags is  provided. The name of the output files will be: Plot_\<Number in 00X format\>\<-log or -db if trasformation was used\>\<-ort, -eqd -eqa -str depending on the projection chosen\>.asc 
 
 **-ori \<0.0 180.0 0.0\>**- camera orientation, pitch, yaw and roll/tilt angles in degrees (optional). If not set, it implies an upward looking camera. E.g. 0.0 180.0 0.0 means a camera oriented towards the horizon looking south, not tilted.
-NB upward looking camera has pitch at 90 degrees corresponds to 0 degrees zenith angle - dont confuse the -zenCut value, that is in zenith angle. 
+NB upward looking camera has pitch at 90 degrees corresponds to 0 degrees zenith angle - don't confuse the -zenCut value, that is in zenith angle. 
 
 **-maxdist: \<distance in meters\>**: *default=1000.0* - any points falling outside this distance from the camera center will be ignored.   
 
 **-log**: converts pixel values, which represent point counts, to log10 scale (-orast must be also present) - formula is log10(pixelvalue+1). 
 Cells with no pixels (value=0) are thus given log(1) and have value 0 also after transformation.  This can be helpful as high zenith angles will obviously intersect a very high number of poitnts. Log-transformation can scale to better visualize results. 
+
+**-proj**: \<str|eqa|eqr|ort|rct\>**: *default=eqa* - different projections, respectively :
+
+ - str = stereographic
+ - eqa = equisolid / equal area (Default) 
+ - eqr = equi-rectangular
+ - ort = orthometric
+ - rct = rect
+
+
 
 **-db**: converts to dB (decibel values) with -10*log10(pixelvalue/maxPixelValue). The pixel with most point counts will have value 1, the other will have positive values.  
 

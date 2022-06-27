@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
         byebye(true, argc==1);
       } ;
       if(ori[0]==0.0) {
-        fprintf(stderr, "WARNING:  zenith angle inserted is '%s'"
+        fprintf(stderr, "WARNING:  pitch angle inserted is '%s'"
                   " this means that it will be  looking at the horizon."
                   " - please check \n",
                   argv[i]);
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
       ori[1]=atof(argv[i]);
 
       if(ori[1]==0.0) {
-        fprintf(stderr, "WARNING:  roll angle inserted is '%s'."
+        fprintf(stderr, "WARNING:  yaw angle inserted is '%s'."
                   " - please check \n",
                   argv[i]);
       }
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
                   argv[i]);
       }
       if(ori[2]<-360.0||ori[2]>360.0) {
-        fprintf(stderr, "ERROR:  yaw angle inserted is '%s'"
+        fprintf(stderr, "ERROR:  roll angle inserted is '%s'"
                   " ONLY VALUES BETWEEN 0 AND 360 are allowed."
                   " - please check \n",
                   argv[i]);
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
       } else {
         fprintf(stderr, "ERROR:  argument -proj '%s'"
                   " not correct. Possible values are: \n\teqa, eqd, str, ort  \n\trespectively"
-                  " for : \n\tequisolid-angl, equidistant, stereographic and orthographic projections"
+                  " for : \n\tequisolid/equiareal, equidistant, stereographic and orthographic projections"
                   " - please check \n",
                   argv[i]);
         byebye(true, argc==1);
