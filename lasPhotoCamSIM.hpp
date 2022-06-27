@@ -205,14 +205,17 @@ class quantizer{
       }
       
       fprintf(stderr, "\n==============================\n"
-                "Setup with plot center (1st plot) %.5f %.5f \n" 
-                "zenCut=%.2f (radians)\n" 
-                "zenCut=%.2f (degrees)\n" 
-                "grid size =%d\n" 
+                "Setup with:\n"
+                "- plot center (1st plot) %.5f %.5f \n" 
+                "- zenCut=%.2f (radians)\n" 
+                "- zenCut=%.2f (degrees)\n" 
+                "- grid size =%d\n" 
+                "- prj =%s\n" 
                 "\n", plotCenters[0].x, plotCenters[0].y, 
                 this->zenCut, 
                 rad2deg(this->zenCut),
-                plotCenters[0].orast);
+                plotCenters[0].orast,
+                projchar[ plotCenters[0].proj ]);
       
       this->grids = (float***)malloc(sizeof( *grids)  * plots);
 
