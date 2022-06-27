@@ -121,8 +121,7 @@ Cells with no pixels (value=0) are thus given log(1) and have value 0 also after
  - str = stereographic
  - eqa = equisolid / equal area (Default) 
  - eqr = equi-rectangular
- - ort = orthometric
- - rct = rect
+ - ort = orthometric 
 
 
 
