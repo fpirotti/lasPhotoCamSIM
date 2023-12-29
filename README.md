@@ -17,21 +17,21 @@ See   [ouput examples](#output-examples)  at the bottom of this page .
 
 ### Install
 
-Download the compiled executable lasPhotoCamSIM (linux) or lasPhotoCamSIM.exe (Windows 64-bit compiled with MingW) and enjoy.
+Download the compiled executable file "lasPhotoCamSIM" (linux) or 
+lasPhotoCamSIM.exe (Windows 64-bit compiled with MingW) and enjoy.
 
 
 ### Compile
 
-To compile from source code clone this directory or download the CPP and HPP files and follow these instructions.
+To compile from source code clone this directory or 
+download the CPP and HPP files and follow these instructions.
+
+Point Cloud Library is required, so please install it before compiling.
+
+- Download Point Cloud Library (https://github.com/PointCloudLibrary/pcl/releases)[https://github.com/PointCloudLibrary/pcl/releases].
 
 #### LINUX   
-
- - Download LAStools (https://rapidlasso.com/lastools/)[https://rapidlasso.com/lastools/]. 
- - Compile LAStools/LASlib :
-    - go to LAStools directory and create a "build" directory (e.g. mkdir build)
-    - cd build
-    - cmake ../ (install cmake if you don't have it) 
-    - make
+ 
  - Compile lasPhotoCamSIM :
     - go to the "example" directory in LASlib (<LAStools install dir>/LASlib/example) and copy/move the lasPhotoCamSIM.cpp and lasPhotoCamSIM.hpp files there.
     - Open "Makefile" file and modify contents: 
@@ -56,7 +56,8 @@ You should be able then to run successfully the command **"make lasPhotoCamSIM"*
 
 ### WINDOWS
 
-Use  the MingW compiler chain and follow the steps above, like for linux platforms.
+Use yor favorite compiler chain (MingW or VisualStudio...) and follow
+the steps above, like for linux platforms.
 
 
 
